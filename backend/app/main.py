@@ -15,7 +15,6 @@ from .assistant import answer, generate_draft, generate_questions, generate_summ
 from .documents import extract_document, extract_paste
 from .matching import ALIASES, find_skill, rank
 from .models import Candidate, JobDescription, Workspace, workspace_from_dict
-from .sample_data import sample_workspace
 
 
 class Credentials(BaseModel):
@@ -75,7 +74,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             record = session.get(WorkspaceRecord, user.id)
             if record:
                 return workspace_from_dict(record.payload)
-            current = sample_workspace()
+            current = Workspace([], [], "")
             session.add(WorkspaceRecord(user_id=user.id, payload=asdict(current)))
             try:
                 session.commit()
@@ -108,6 +107,12 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd = next((item for item in current.jds if item.id == jd_id), None)
         if jd is None:
             raise HTTPException(status_code=404, detail="Job not found.")
+        return jd
+
+    def active_jd(current: Workspace) -> JobDescription:
+        jd = next((item for item in current.jds if item.id == current.selected_jd_id), None)
+        if jd is None:
+            raise HTTPException(status_code=409, detail="Add a job description before using this feature.")
         return jd
 
     def inferred_skills(evidence) -> tuple[list[str], list[str]]:
@@ -186,6 +191,20 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             "recruitment": current.recruitment,
             "drafts": current.drafts,
         }
+
+    @app.delete("/api/workspace/sample-data")
+    def remove_sample_data(user: User = Depends(current_user)):
+        current = workspace(user)
+        bundled_jds = {"data-engineer", "fullstack"}
+        bundled_candidates = {"maya", "arjun", "neha", "samira", "dev", "lena"}
+        current.jds = [jd for jd in current.jds if jd.id not in bundled_jds]
+        current.candidates = [candidate for candidate in current.candidates if candidate.id not in bundled_candidates]
+        current.recruitment = [item for item in current.recruitment if item["candidate_id"] not in bundled_candidates]
+        current.drafts = [item for item in current.drafts if item["candidate_id"] not in bundled_candidates]
+        if current.selected_jd_id in bundled_jds:
+            current.selected_jd_id = current.jds[0].id if current.jds else ""
+        save_workspace(user, current)
+        return {"ok": True}
 
     @app.post("/api/jds/paste", status_code=201)
     def add_pasted_jd(body: PastedJD, user: User = Depends(current_user)):
@@ -268,13 +287,14 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     @app.get("/api/compare")
     def compare(user: User = Depends(current_user)):
         current = workspace(user)
-        return {"jd": asdict(current.active_jd()), "results": [asdict(item) for item in rank(current.active_jd(), current.candidates)]}
+        jd = next((item for item in current.jds if item.id == current.selected_jd_id), None)
+        return {"jd": asdict(jd) if jd else None, "results": [asdict(item) for item in rank(jd, current.candidates)] if jd else []}
 
     @app.get("/api/candidates/{candidate_id}/analysis")
     def candidate_analysis(candidate_id: str, user: User = Depends(current_user)):
         current = workspace(user)
         candidate = get_candidate(current, candidate_id)
-        jd = current.active_jd()
+        jd = active_jd(current)
         match = next(item for item in rank(jd, current.candidates) if item.candidate_id == candidate_id)
         return {"candidate": asdict(candidate), "jd": asdict(jd), "match": asdict(match), "summary": generate_summary(jd, candidate, match), "questions": generate_questions(jd, candidate, match)}
 
@@ -282,11 +302,12 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     def create_draft(body: DraftRequest, user: User = Depends(current_user)):
         current = workspace(user)
         candidate = get_candidate(current, body.candidate_id)
+        jd = active_jd(current)
         try:
-            content = generate_draft(body.kind, current.active_jd(), candidate, body.date, body.time, body.link)
+            content = generate_draft(body.kind, jd, candidate, body.date, body.time, body.link)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        draft = {"id": uuid4().hex, "candidate_id": candidate.id, "candidate_name": candidate.name, "job_title": current.active_jd().title, "kind": body.kind, "text": content}
+        draft = {"id": uuid4().hex, "candidate_id": candidate.id, "candidate_name": candidate.name, "job_title": jd.title, "kind": body.kind, "text": content}
         current.drafts.append(draft)
         save_workspace(user, current)
         return draft

@@ -70,6 +70,8 @@ def _candidate(question: str, workspace: Workspace) -> Candidate | None:
 
 def _fallback(question: str, workspace: Workspace) -> dict:
     query = question.lower()
+    if not workspace.jds:
+        return {"text": "Add a job description to this workspace, then I can help compare candidates and prepare interviews.", "citations": []}
     jd = workspace.active_jd()
     matches = rank(jd, workspace.candidates)
     if not matches:
@@ -106,6 +108,8 @@ def _fallback(question: str, workspace: Workspace) -> dict:
 
 def answer(question: str, workspace: Workspace, groq_client=None) -> dict:
     fallback = _fallback(question, workspace)
+    if not workspace.jds:
+        return fallback
     if "not established" in fallback["text"] and not fallback["citations"]:
         return fallback
     key = os.getenv("GROQ_API_KEY")

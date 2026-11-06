@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from dataclasses import asdict
 
 
 def make_client(tmp_path):
@@ -20,11 +21,40 @@ def test_workspace_and_comparison_require_login(tmp_path):
         register(client, "one@example.test")
         workspace = client.get("/api/workspace")
         assert workspace.status_code == 200
-        assert len(workspace.json()["jds"]) >= 2
-        assert len(workspace.json()["candidates"]) >= 6
+        assert workspace.json()["jds"] == []
+        assert workspace.json()["candidates"] == []
+        assert workspace.json()["selected_jd_id"] == ""
         matches = client.get("/api/compare")
         assert matches.status_code == 200
-        assert matches.json()["results"][0]["score"] >= matches.json()["results"][1]["score"]
+        assert matches.json() == {"jd": None, "results": []}
+
+
+def test_empty_workspace_guides_chat_and_requires_a_jd_for_drafts(tmp_path):
+    with make_client(tmp_path) as client:
+        register(client, "empty@example.test")
+        reply = client.post("/api/chat", json={"question": "Who is the top match?"})
+        assert reply.status_code == 200
+        assert "job description" in reply.json()["text"].lower()
+        assert reply.json()["citations"] == []
+        candidate = client.post("/api/candidates/paste", json={"name": "Test Candidate", "text": "Python and SQL"})
+        assert candidate.status_code == 201
+        assert client.get("/api/compare").json()["results"] == []
+        draft = client.post("/api/drafts/generate", json={"candidate_id": candidate.json()["id"], "kind": "invitation"})
+        assert draft.status_code == 409
+        assert "job description" in draft.json()["detail"].lower()
+
+
+def test_uploaded_material_completes_comparison_after_empty_start(tmp_path):
+    with make_client(tmp_path) as client:
+        register(client, "flow@example.test")
+        candidate = client.post("/api/candidates/paste", json={"name": "Test Candidate", "text": "Built Python services with SQL."})
+        jd = client.post("/api/jds/paste", json={"title": "Data role", "text": "Required: Python, SQL, Airflow."})
+        assert jd.status_code == 201
+        comparison = client.get("/api/compare")
+        assert comparison.status_code == 200
+        assert comparison.json()["jd"]["title"] == "Data role"
+        assert comparison.json()["results"][0]["candidate_id"] == candidate.json()["id"]
+        assert comparison.json()["results"][0]["missing_required"] == ["Airflow"]
 
 
 def test_pasted_candidate_is_isolated_by_account(tmp_path):
@@ -32,10 +62,11 @@ def test_pasted_candidate_is_isolated_by_account(tmp_path):
         register(alice, "alice@example.test")
         added = alice.post("/api/candidates/paste", json={"name": "Extra Candidate", "text": "Python and SQL"})
         assert added.status_code == 201
-        assert len(alice.get("/api/workspace").json()["candidates"]) == 7
+        assert len(alice.get("/api/workspace").json()["candidates"]) == 1
     with make_client(tmp_path) as bob:
         register(bob, "bob@example.test")
-        assert len(bob.get("/api/workspace").json()["candidates"]) == 6
+        assert bob.get("/api/workspace").json()["candidates"] == []
+        assert bob.get(f"/api/candidates/{added.json()['id']}/analysis").status_code == 404
 
 
 def test_workspace_survives_app_restart(tmp_path):
@@ -65,13 +96,13 @@ def test_first_workspace_requests_can_arrive_together(tmp_path, monkeypatch):
     from backend.app import main
 
     barrier = Barrier(2)
-    original = main.sample_workspace
+    original = main.Workspace
 
-    def concurrent_sample():
+    def concurrent_workspace(*args, **kwargs):
         barrier.wait(timeout=5)
-        return original()
+        return original(*args, **kwargs)
 
-    monkeypatch.setattr(main, "sample_workspace", concurrent_sample)
+    monkeypatch.setattr(main, "Workspace", concurrent_workspace)
     with make_client(tmp_path) as client:
         register(client, "first-login@example.test")
         with ThreadPoolExecutor(max_workers=2) as pool:
@@ -83,9 +114,42 @@ def test_chat_and_draft_work_without_api_key(tmp_path, monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     with make_client(tmp_path) as client:
         register(client, "demo@example.test")
+        jd = client.post("/api/jds/paste", json={"title": "Data Engineer", "text": "Required: Python, SQL, Airflow."})
+        assert jd.status_code == 201
+        candidate = client.post("/api/candidates/paste", json={"name": "Maya Test", "text": "Built Python and SQL pipelines using Airflow."})
+        assert candidate.status_code == 201
         reply = client.post("/api/chat", json={"question": "Why is Maya ranked first?"})
         assert reply.status_code == 200
         assert reply.json()["citations"]
-        draft = client.post("/api/drafts/generate", json={"candidate_id": "maya", "kind": "invitation", "date": "10 Nov 2026", "time": "14:00 IST", "link": "https://example.test/meet"})
+        draft = client.post("/api/drafts/generate", json={"candidate_id": candidate.json()["id"], "kind": "invitation", "date": "10 Nov 2026", "time": "14:00 IST", "link": "https://example.test/meet"})
         assert draft.status_code == 200
         assert "Interview" in draft.json()["text"]
+
+
+def test_old_account_can_remove_bundled_samples_without_losing_own_documents(tmp_path):
+    from backend.app.auth import WorkspaceRecord
+    from backend.app.main import create_app
+    from backend.app.sample_data import sample_workspace
+
+    app = create_app(f"sqlite:///{tmp_path / 'legacy.db'}", "legacy-test-secret")
+    with TestClient(app) as client:
+        assert client.delete("/api/workspace/sample-data").status_code == 401
+        registration = client.post("/api/auth/register", json={"email": "legacy@example.test", "password": "long-demo-password"})
+        user_id = registration.json()["id"]
+        with app.state.auth.session_factory() as session:
+            session.add(WorkspaceRecord(user_id=user_id, payload=asdict(sample_workspace())))
+            session.commit()
+        jd = client.post("/api/jds/paste", json={"title": "My Role", "text": "Required: SQL."})
+        candidate = client.post("/api/candidates/paste", json={"name": "My Candidate", "text": "Built SQL reports."})
+        assert jd.status_code == candidate.status_code == 201
+        sample_draft = client.post("/api/drafts/generate", json={"candidate_id": "maya", "kind": "invitation"})
+        assert sample_draft.status_code == 200
+
+        cleared = client.delete("/api/workspace/sample-data")
+        assert cleared.status_code == 200
+        saved = client.get("/api/workspace").json()
+        assert [item["id"] for item in saved["jds"]] == [jd.json()["id"]]
+        assert [item["id"] for item in saved["candidates"]] == [candidate.json()["id"]]
+        assert saved["selected_jd_id"] == jd.json()["id"]
+        assert saved["recruitment"] == []
+        assert saved["drafts"] == []

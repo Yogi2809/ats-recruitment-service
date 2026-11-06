@@ -20,7 +20,7 @@ beforeEach(() => {
   }))
 })
 
-afterEach(() => cleanup())
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 test('login is minimal and create-account navigation works', async () => {
   const { default: App } = await import('./App')
@@ -31,6 +31,71 @@ test('login is minimal and create-account navigation works', async () => {
   expect(screen.getByRole('button', { name: 'Log in' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
   expect(await screen.findByRole('heading', { name: 'Create account' })).toBeTruthy()
+})
+
+test('new account sees empty onboarding instead of sample candidates', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'fresh@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json({ jds: [], candidates: [], selected_jd_id: '', recruitment: [], drafts: [] })
+    if (url.endsWith('/api/compare')) return Response.json({ jd: null, results: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'fresh@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  await screen.findByText('Add a job description and a CV to see matches.')
+  expect(screen.queryByText('Maya Shah')).toBeNull()
+  expect(screen.queryByText('SYNTHETIC DATA')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Documents' }))
+  expect(screen.getByText('No job descriptions yet')).toBeTruthy()
+  expect(screen.getByText('No candidate CVs yet')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Compare candidates' }))
+  expect(screen.getByText('Add a job description and a CV to compare candidates.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Email drafts' }))
+  expect(screen.getByText('Add a job description and a CV before creating a draft.')).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Create draft/ })).toHaveProperty('disabled', true)
+  fireEvent.click(screen.getByRole('button', { name: 'Open recruiter assistant' }))
+  expect(screen.getByText('Add a job description and a CV, then ask me about their match.')).toBeTruthy()
+})
+
+test('legacy account can remove bundled examples while keeping its own documents', async () => {
+  const ownJD = { id: 'own-jd', title: 'My Role', required: ['Python'], preferred: [], evidence: [] }
+  const ownCandidate = { id: 'own-cv', name: 'My Candidate', evidence: [] }
+  let current = { ...sampleWorkspace, jds: [...sampleWorkspace.jds, ownJD], candidates: [...sampleWorkspace.candidates, ownCandidate] }
+  vi.stubGlobal('confirm', vi.fn(() => true))
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'legacy@example.test' })
+    if (url.endsWith('/api/workspace/sample-data') && options?.method === 'DELETE') {
+      current = { ...current, jds: [ownJD], candidates: [ownCandidate], selected_jd_id: 'own-jd' }
+      return Response.json({ ok: true })
+    }
+    if (url.endsWith('/api/workspace')) return Response.json(current)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: current.jds[0] || null, results: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'legacy@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  expect(screen.getByText('Maya Shah')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Remove bundled samples' }))
+  await waitFor(() => expect(screen.queryByText('Maya Shah')).toBeNull())
+  expect(screen.getByText('My Role')).toBeTruthy()
+  expect(screen.getByText('My Candidate')).toBeTruthy()
 })
 
 test('registered user can open and close floating chat', async () => {

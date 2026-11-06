@@ -1,6 +1,6 @@
 # RoleTrace
 
-**Live demo:** [roletrace.vercel.app](https://roletrace.vercel.app) — create a test account to use the synthetic recruiter workspace. No API key is required.
+**Live demo:** [roletrace.vercel.app](https://roletrace.vercel.app) — create an account, then add your own synthetic test documents. New accounts start with an empty workspace. No API key is required.
 
 A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; and answers questions through a floating recruiter chat.
 
@@ -21,19 +21,21 @@ cd ..
 python -m uvicorn backend.app.main:app --reload --port 8000
 ```
 
-Open `http://localhost:8000`, create an account with a password of at least 12 characters, and use the preloaded sample role and candidates. Local accounts, added documents, and drafts are stored in `roletrace.db` and survive a server restart.
+Open `http://localhost:8000`, create an account with a password of at least 12 characters, and add a JD and CVs. The `sample_data/` directory contains optional synthetic files to upload or paste. Local accounts, added documents, and drafts are stored in `roletrace.db` and survive a server restart.
 
 For frontend development, run `npm run dev` in `frontend/` while the Python server runs on port 8000. Vite proxies `/api` to Python.
 
 ## Five-minute demo
 
-1. Create an account. The workspace opens with two synthetic JDs and six synthetic CVs.
-2. Open **Documents**. Select **Senior Data Engineer**, inspect its required/preferred skills, then paste or upload a JD/CV. The `sample_data/` folder has uploadable TXT examples.
+1. Create an account. The workspace starts empty.
+2. Open **Documents**. Upload `sample_data/senior_data_engineer_jd.txt` and one or more CVs from `sample_data/`, or paste synthetic text into the separate JD and CV forms. Review the extracted required/preferred skills.
 3. Open **Compare candidates**. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
 4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions.
 5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, and “What should I ask Maya?” Open the source excerpts beneath each answer.
 6. Open **Email drafts**. Generate an interview invitation or assessment instructions, edit the text, save it, and copy it. The app does not send email.
 7. Switch light/dark mode in the top bar, then log out in the sidebar.
+
+Accounts created before the empty-workspace update may still contain the original bundled examples. In **Documents**, use **Remove bundled samples** to remove those examples and their related drafts while keeping your own uploads.
 
 ## How matching works
 
