@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from argon2 import PasswordHasher
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import Integer, String, create_engine, select
+from sqlalchemy import JSON, ForeignKey, Integer, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -19,6 +19,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+
+
+class WorkspaceRecord(Base):
+    __tablename__ = "workspaces"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
 @dataclass

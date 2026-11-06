@@ -8,11 +8,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .auth import AuthStore, User, create_auth_store
+from .auth import AuthStore, User, WorkspaceRecord, create_auth_store
 from .assistant import answer, generate_draft, generate_questions, generate_summary
 from .documents import extract_document, extract_paste
 from .matching import ALIASES, find_skill, rank
-from .models import Candidate, JobDescription, Workspace
+from .models import Candidate, JobDescription, Workspace, workspace_from_dict
 from .sample_data import sample_workspace
 
 
@@ -60,7 +60,6 @@ class ChatRequest(BaseModel):
 def create_app(database_url: str | None = None, secret_key: str | None = None) -> FastAPI:
     app = FastAPI(title="RoleTrace")
     app.state.auth = create_auth_store(database_url, secret_key)
-    app.state.workspaces: dict[int, Workspace] = {}
 
     def current_user(request: Request) -> User:
         store: AuthStore = request.app.state.auth
@@ -70,9 +69,24 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         return user
 
     def workspace(user: User) -> Workspace:
-        if user.id not in app.state.workspaces:
-            app.state.workspaces[user.id] = sample_workspace()
-        return app.state.workspaces[user.id]
+        with app.state.auth.session_factory() as session:
+            record = session.get(WorkspaceRecord, user.id)
+            if record:
+                return workspace_from_dict(record.payload)
+            current = sample_workspace()
+            session.add(WorkspaceRecord(user_id=user.id, payload=asdict(current)))
+            session.commit()
+            return current
+
+    def save_workspace(user: User, current: Workspace) -> None:
+        with app.state.auth.session_factory() as session:
+            record = session.get(WorkspaceRecord, user.id)
+            if record is None:
+                record = WorkspaceRecord(user_id=user.id, payload=asdict(current))
+                session.add(record)
+            else:
+                record.payload = asdict(current)
+            session.commit()
 
     def get_candidate(current: Workspace, candidate_id: str) -> Candidate:
         candidate = next((item for item in current.candidates if item.id == candidate_id), None)
@@ -162,6 +176,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd = JobDescription(uuid4().hex, body.title.strip() or "Untitled job", body.required if body.required is not None else inferred_required, body.preferred if body.preferred is not None else inferred_preferred, evidence)
         current.jds.append(jd)
         current.selected_jd_id = jd.id
+        save_workspace(user, current)
         return asdict(jd)
 
     @app.post("/api/jds/upload", status_code=201)
@@ -175,6 +190,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd = JobDescription(uuid4().hex, Path(file.filename or "Job").stem.replace("_", " "), required, preferred, evidence)
         current.jds.append(jd)
         current.selected_jd_id = jd.id
+        save_workspace(user, current)
         return asdict(jd)
 
     @app.post("/api/jds/{jd_id}/select")
@@ -182,14 +198,17 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current = workspace(user)
         get_jd(current, jd_id)
         current.selected_jd_id = jd_id
+        save_workspace(user, current)
         return {"selected_jd_id": jd_id}
 
     @app.patch("/api/jds/{jd_id}")
     def update_jd(jd_id: str, body: SkillsUpdate, user: User = Depends(current_user)):
-        jd = get_jd(workspace(user), jd_id)
+        current = workspace(user)
+        jd = get_jd(current, jd_id)
         jd.title = body.title.strip() or jd.title
         jd.required = [item.strip() for item in body.required if item.strip()]
         jd.preferred = [item.strip() for item in body.preferred if item.strip()]
+        save_workspace(user, current)
         return asdict(jd)
 
     @app.post("/api/candidates/paste", status_code=201)
@@ -201,6 +220,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         candidate = Candidate(uuid4().hex, body.name.strip() or "Unnamed candidate", evidence)
         current.candidates.append(candidate)
+        save_workspace(user, current)
         return asdict(candidate)
 
     @app.post("/api/candidates/upload", status_code=201)
@@ -212,6 +232,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         candidate = Candidate(uuid4().hex, Path(file.filename or "Candidate").stem.replace("_", " "), evidence)
         current.candidates.append(candidate)
+        save_workspace(user, current)
         return asdict(candidate)
 
     @app.delete("/api/candidates/{candidate_id}")
@@ -219,6 +240,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current = workspace(user)
         get_candidate(current, candidate_id)
         current.candidates = [item for item in current.candidates if item.id != candidate_id]
+        save_workspace(user, current)
         return {"ok": True}
 
     @app.get("/api/compare")
@@ -244,14 +266,17 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         draft = {"id": uuid4().hex, "candidate_id": candidate.id, "candidate_name": candidate.name, "job_title": current.active_jd().title, "kind": body.kind, "text": content}
         current.drafts.append(draft)
+        save_workspace(user, current)
         return draft
 
     @app.patch("/api/drafts/{draft_id}")
     def update_draft(draft_id: str, body: DraftUpdate, user: User = Depends(current_user)):
-        draft = next((item for item in workspace(user).drafts if item["id"] == draft_id), None)
+        current = workspace(user)
+        draft = next((item for item in current.drafts if item["id"] == draft_id), None)
         if draft is None:
             raise HTTPException(status_code=404, detail="Draft not found.")
         draft["text"] = body.text
+        save_workspace(user, current)
         return draft
 
     @app.delete("/api/drafts/{draft_id}")
@@ -261,6 +286,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.drafts = [item for item in current.drafts if item["id"] != draft_id]
         if len(current.drafts) == old:
             raise HTTPException(status_code=404, detail="Draft not found.")
+        save_workspace(user, current)
         return {"ok": True}
 
     @app.post("/api/chat")

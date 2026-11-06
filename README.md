@@ -19,7 +19,7 @@ cd ..
 python -m uvicorn backend.app.main:app --reload --port 8000
 ```
 
-Open `http://localhost:8000`, create an account with a password of at least 12 characters, and use the preloaded sample role and candidates. Local accounts are stored in `roletrace.db`; your added documents and drafts remain in server memory and reset when the server restarts.
+Open `http://localhost:8000`, create an account with a password of at least 12 characters, and use the preloaded sample role and candidates. Local accounts, added documents, and drafts are stored in `roletrace.db` and survive a server restart.
 
 For frontend development, run `npm run dev` in `frontend/` while the Python server runs on port 8000. Vite proxies `/api` to Python.
 
@@ -47,9 +47,16 @@ For more flexible, natural recruiter questions, set `GROQ_API_KEY` as a **server
 
 ## Deploy a shareable URL
 
-The repository includes a multi-stage `Dockerfile` and a Render Blueprint in `render.yaml`. Push the repository to your own GitHub account, then in Render choose **New → Blueprint** and connect the repository. Render will build one web service for the UI/API and a Postgres database for account records. Open the generated `onrender.com` URL, create a reviewer account, and run the demo steps above. You can optionally add `GROQ_API_KEY` in the Render web service's environment settings.
+The no-card deployment uses **Vercel Hobby** for the FastAPI web app and **Neon Free** for Postgres. The root `app.py` is Vercel's Python entrypoint, and the compiled React files in `frontend/dist/` are included in the repository. Import this repository at `vercel.com/new`, keep the project root as the repository root, and set these server-side environment variables:
 
-The Blueprint sets `SECRET_KEY` automatically and uses secure session cookies in production. Free Render web services may sleep when idle, so the first request can take longer. Render's free Postgres databases currently expire after 30 days; deploy near the interview date or choose another database plan for a longer-lived link. Uploaded documents and drafts are intentionally kept in memory for this prototype and reset on redeploy, restart, or sleep. Accounts remain in Postgres while that database exists. Use synthetic data only.
+- `DATABASE_URL`: the Neon project's pooled Postgres connection string.
+- `SECRET_KEY`: a long, randomly generated value for signed login sessions.
+- `APP_ENV`: `production`.
+- `GROQ_API_KEY` (optional): enables more flexible recruiter chat.
+
+Deploy on the free Hobby plan and open the generated `vercel.app` link. The first request can take longer while Python dependencies load. Vercel Functions can run on different instances, so RoleTrace saves account and workspace data in Neon instead of relying on process memory. Use synthetic data only; never put the database URL or API key in GitHub or frontend code.
+
+The Dockerfile and `render.yaml` are also included for container hosting. Render currently requires a card on this account even for a free service, so Vercel is the default no-card route for this submission.
 
 ## Tests
 
@@ -73,4 +80,4 @@ cd frontend && npm test && npm run build
 
 ## Prototype limits
 
-This is an interview prototype. It does not perform OCR on scanned PDFs, verify credentials, send emails, integrate with an ATS, or make hiring decisions. The skill catalog is deliberately small and can miss synonyms; recruiters can edit JD skills. Account records persist, while user documents and drafts are stored in a single server process and are not suitable for long-term or multi-instance storage. A production system would add persistent document storage, audit controls, deeper evaluation for bias and accuracy, and stronger account abuse protection.
+This is an interview prototype. It does not perform OCR on scanned PDFs, verify credentials, send emails, integrate with an ATS, or make hiring decisions. The skill catalog is deliberately small and can miss synonyms; recruiters can edit JD skills. Workspace data is stored in Postgres as JSON for the demo; a production system would add dedicated document storage, audit controls, deeper evaluation for bias and accuracy, and stronger account abuse protection.

@@ -50,3 +50,16 @@ class Workspace:
 
     def active_jd(self) -> JobDescription:
         return next(jd for jd in self.jds if jd.id == self.selected_jd_id)
+
+
+def workspace_from_dict(data: dict) -> Workspace:
+    jds = [
+        JobDescription(item["id"], item["title"], item["required"], item["preferred"],
+                       [Evidence(**evidence) for evidence in item["evidence"]])
+        for item in data["jds"]
+    ]
+    candidates = [
+        Candidate(item["id"], item["name"], [Evidence(**evidence) for evidence in item["evidence"]])
+        for item in data["candidates"]
+    ]
+    return Workspace(jds, candidates, data["selected_jd_id"], data.get("recruitment", []), data.get("drafts", []))

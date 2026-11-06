@@ -36,6 +36,17 @@ def test_pasted_candidate_is_isolated_by_account(tmp_path):
         assert len(bob.get("/api/workspace").json()["candidates"]) == 6
 
 
+def test_workspace_survives_app_restart(tmp_path):
+    with make_client(tmp_path) as first:
+        register(first, "persist@example.test")
+        added = first.post("/api/candidates/paste", json={"name": "Extra Candidate", "text": "Python and SQL"})
+        assert added.status_code == 201
+    with make_client(tmp_path) as second:
+        login = second.post("/api/auth/login", json={"email": "persist@example.test", "password": "long-demo-password"})
+        assert login.status_code == 200
+        assert any(c["name"] == "Extra Candidate" for c in second.get("/api/workspace").json()["candidates"])
+
+
 def test_chat_and_draft_work_without_api_key(tmp_path, monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     with make_client(tmp_path) as client:
