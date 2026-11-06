@@ -31,7 +31,7 @@ For frontend development, run `npm run dev` in `frontend/` while the Python serv
 2. Open **Documents**. Select **Senior Data Engineer**, inspect its required/preferred skills, then paste or upload a JD/CV. The `sample_data/` folder has uploadable TXT examples.
 3. Open **Compare candidates**. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
 4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions.
-5. Click the floating **Ask RoleTrace** button. Try “Why is Maya a match?”, “Who has Airflow?”, and “What should I ask Maya?” Open the source excerpts beneath each answer.
+5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, and “What should I ask Maya?” Open the source excerpts beneath each answer.
 6. Open **Email drafts**. Generate an interview invitation or assessment instructions, edit the text, save it, and copy it. The app does not send email.
 7. Switch light/dark mode in the top bar, then log out in the sidebar.
 
