@@ -12,6 +12,7 @@ from pathlib import Path
 import secrets
 import subprocess
 from tempfile import TemporaryDirectory
+import time
 from uuid import uuid4
 
 from docx import Document
@@ -25,8 +26,15 @@ def request(base_url, cookies, method, path, *, body=None, upload=None):
     if upload is not None:
         command += ["-F", f"file=@{upload}"]
     command.append(base_url.rstrip("/") + path)
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode:
+    for attempt in range(3):
+        result = subprocess.run(command, capture_output=True, text=True)
+        if not result.returncode:
+            break
+        # DNS, connection, and TLS-handshake errors occur before a request is sent.
+        safe_to_retry = result.returncode in {6, 7, 35} or (method == "GET" and result.returncode == 28)
+        if safe_to_retry and attempt < 2:
+            time.sleep(0.5 * (attempt + 1))
+            continue
         raise RuntimeError(f"curl failed for {method} {path}: {result.stderr[:300]}")
     payload, separator, status = result.stdout.rpartition("\n")
     if not separator:
@@ -107,6 +115,14 @@ def run(base_url):
         assert "not established" in unknown["text"].lower()
         checks.append("TXT uploads, ranking, evidence, interview prep, grounded chat")
 
+        unrecorded = expect(request(base_url, alice_cookie, "POST", "/api/chat", body={"question": "What stage is Maya at?", "candidate_id": maya["id"]}), 200, "unknown stage")
+        assert "not recorded" in unrecorded["text"].lower()
+        stage = expect(request(base_url, alice_cookie, "PATCH", f"/api/candidates/{maya['id']}/recruitment", body={"stage": "Recruiter screen", "assessment": "Data exercise pending"}), 200, "save stage")
+        assert stage["stage"] == "Recruiter screen"
+        known_stage = expect(request(base_url, alice_cookie, "POST", "/api/chat", body={"question": "What assessment is Maya assigned?", "candidate_id": maya["id"]}), 200, "recorded stage")
+        assert "Data exercise pending" in known_stage["text"] and known_stage["citations"][0]["source"] == "Recruitment record"
+        checks.append("recruitment status is editable and chat reports only saved facts")
+
         invitation = expect(request(base_url, alice_cookie, "POST", "/api/drafts/generate", body={"candidate_id": maya["id"], "kind": "invitation", "date": "2026-11-10", "time": "14:00", "link": "https://example.test/meet"}), 200, "invitation")
         assessment = expect(request(base_url, alice_cookie, "POST", "/api/drafts/generate", body={"candidate_id": maya["id"], "kind": "assessment", "date": "2026-11-12", "link": "https://example.test/task"}), 200, "assessment")
         assert "Interview invitation" in invitation["text"] and "Assessment instructions" in assessment["text"]
@@ -119,6 +135,7 @@ def run(base_url):
         expect(request(base_url, bob_cookie, "GET", f"/api/candidates/{maya['id']}/analysis"), 404, "cross-account candidate")
         expect(request(base_url, bob_cookie, "POST", f"/api/jds/{jd['id']}/select"), 404, "cross-account JD")
         expect(request(base_url, bob_cookie, "PATCH", f"/api/drafts/{invitation['id']}", body={"text": "Wrong account"}), 404, "cross-account draft")
+        expect(request(base_url, bob_cookie, "PATCH", f"/api/candidates/{maya['id']}/recruitment", body={"stage": "Offer"}), 404, "cross-account status")
         checks.append("cross-account resource access denied")
 
         docx_path, pdf_path = root / "full_stack.docx", root / "Synthetic_PDF_Candidate.pdf"

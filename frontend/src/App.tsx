@@ -129,7 +129,7 @@ export default function App() {
           {page === 'overview' && <Overview workspace={workspace} results={results} activeJD={activeJD} onDocuments={() => nav('documents')} onCompare={() => nav('compare')} onCandidate={openCandidate} />}
           {page === 'documents' && <Documents workspace={workspace} activeJD={activeJD} run={run} onCompare={() => nav('compare')} />}
           {page === 'compare' && <Compare activeJD={activeJD} results={results} onCandidate={openCandidate} onDocuments={() => nav('documents')} />}
-          {page === 'candidate' && analysis && <CandidateView analysis={analysis} stage={workspace.recruitment.find(r => r.candidate_id === analysis.candidate.id)} onBack={() => nav('compare')} onDrafts={() => nav('drafts')} onAsk={() => setChatOpen(true)} />}
+          {page === 'candidate' && analysis && <CandidateView analysis={analysis} stage={workspace.recruitment.find(r => r.candidate_id === analysis.candidate.id)} onBack={() => nav('compare')} onDrafts={() => nav('drafts')} onAsk={() => setChatOpen(true)} onSaveStatus={(candidateId, stage, assessment) => run(() => api(`/api/candidates/${candidateId}/recruitment`, { method: 'PATCH', body: json({ stage, assessment }) }), 'Recruitment status saved.')} />}
           {page === 'drafts' && <Drafts workspace={workspace} activeJD={activeJD} run={run} />}
         </>}
       </main>
@@ -187,13 +187,28 @@ function Compare({ activeJD, results, onCandidate, onDocuments }: { activeJD?: J
   </>
 }
 
-function CandidateView({ analysis, stage, onBack, onDrafts, onAsk }: { analysis: Analysis; stage?: { stage: string; assessment: string }; onBack: () => void; onDrafts: () => void; onAsk: () => void }) {
+function CandidateView({ analysis, stage, onBack, onDrafts, onAsk, onSaveStatus }: { analysis: Analysis; stage?: { stage: string; assessment: string }; onBack: () => void; onDrafts: () => void; onAsk: () => void; onSaveStatus: (candidateId: string, stage: string, assessment: string) => Promise<boolean> }) {
   const { candidate, jd, match, summary, questions } = analysis
   const skills = [...jd.required.map(skill => ({ skill, category: 'Required', found: match.matched_required.includes(skill) })), ...jd.preferred.map(skill => ({ skill, category: 'Preferred', found: match.matched_preferred.includes(skill) }))]
   return <><button className="back-link" onClick={onBack}><ArrowLeft size={17} /> Back to comparison</button><div className="page-heading candidate-heading"><div><span className="eyebrow">CANDIDATE REVIEW</span><h1>{candidate.name}</h1><p>{jd.title} · {scoreLabel(match.score)}</p></div><div className="heading-actions"><button className="button secondary" onClick={onDrafts}>Draft email</button><button className="button primary" onClick={onAsk}>Ask about candidate <MessageCircle size={17} /></button></div></div>
     <div className="analysis-top"><section className="panel score-panel"><div><span className="eyebrow">ATS-STYLE JD ALIGNMENT</span><h2>{match.score}% alignment</h2><p>Based on skills and wording in the supplied documents.</p></div><ScoreDonut score={match.score} /></section><section className="panel breakdown-panel"><span className="eyebrow">SCORE BREAKDOWN</span><ScoreBar label="Required skills · 70% weight" value={match.required_percent} /><ScoreBar label="Preferred skills · 20% weight" value={match.preferred_percent} /><ScoreBar label="Wording similarity · 10% weight" value={match.similarity_percent} /></section></div>
-    <div className="analysis-grid"><section className="panel evidence-panel"><div className="section-heading compact"><div><span className="eyebrow">DOCUMENT EVIDENCE</span><h2>Skills against the role</h2></div></div><div className="table-wrap"><table><thead><tr><th>Skill</th><th>Type</th><th>CV evidence</th></tr></thead><tbody>{skills.map(item => <tr key={item.skill}><td><strong>{item.skill}</strong></td><td>{item.category}</td><td>{item.found ? <><span className="evidence-status found"><Check size={14} /> Found</span><p className="evidence-quote">“{match.evidence[item.skill]?.text}” <small>{match.evidence[item.skill]?.location}</small></p></> : <span className="evidence-status gap">No evidence found</span>}</td></tr>)}</tbody></table></div></section><aside className="analysis-side"><section className="panel summary-panel"><span className="eyebrow">CANDIDATE SUMMARY</span><h3>At a glance</h3><p>{summary}</p>{stage && <div className="stage-note"><b>Sample recruitment stage</b><span>{stage.stage}</span><small>{stage.assessment}</small></div>}</section><section className="panel questions-panel"><span className="eyebrow">INTERVIEW PREPARATION</span><h3>Questions to ask</h3><ol>{questions.map(question => <li key={question}>{question}</li>)}</ol></section></aside></div>
+    <div className="analysis-grid"><section className="panel evidence-panel"><div className="section-heading compact"><div><span className="eyebrow">DOCUMENT EVIDENCE</span><h2>Skills against the role</h2></div></div><div className="table-wrap"><table><thead><tr><th>Skill</th><th>Type</th><th>CV evidence</th></tr></thead><tbody>{skills.map(item => <tr key={item.skill}><td><strong>{item.skill}</strong></td><td>{item.category}</td><td>{item.found ? <><span className="evidence-status found"><Check size={14} /> Found</span><p className="evidence-quote">“{match.evidence[item.skill]?.text}” <small>{match.evidence[item.skill]?.location}</small></p></> : <span className="evidence-status gap">No evidence found</span>}</td></tr>)}</tbody></table></div></section><aside className="analysis-side"><section className="panel summary-panel"><span className="eyebrow">CANDIDATE SUMMARY</span><h3>At a glance</h3><p>{summary}</p></section><section className="panel questions-panel"><span className="eyebrow">INTERVIEW PREPARATION</span><h3>Questions to ask</h3><ol>{questions.map(question => <li key={question}>{question}</li>)}</ol></section><RecruitmentStatus record={stage} onSave={(newStage, assessment) => onSaveStatus(candidate.id, newStage, assessment)} /></aside></div>
   </>
+}
+
+function RecruitmentStatus({ record, onSave }: { record?: { stage: string; assessment: string }; onSave: (stage: string, assessment: string) => Promise<boolean> }) {
+  const [stage, setStage] = useState(record?.stage || '')
+  const [assessment, setAssessment] = useState(record?.assessment || '')
+  useEffect(() => { setStage(record?.stage || ''); setAssessment(record?.assessment || '') }, [record?.stage, record?.assessment])
+  return <section className="panel status-panel">
+    <span className="eyebrow">RECRUITMENT DATA</span>
+    <h3>Recruitment status</h3>
+    <p className="muted">{record ? `Current stage: ${record.stage}` : 'No status recorded'}</p>
+    {record?.assessment && <p className="status-assessment">{record.assessment}</p>}
+    <label>Stage<select value={stage} onChange={event => setStage(event.target.value)}><option value="">Choose a stage</option><option>Application review</option><option>Recruiter screen</option><option>Technical interview</option><option>Assessment</option><option>Offer</option><option>Closed</option></select></label>
+    <label>Assessment note<input value={assessment} onChange={event => setAssessment(event.target.value)} maxLength={500} placeholder="Optional" /></label>
+    <button className="button secondary full" disabled={!stage} onClick={() => onSave(stage, assessment)}>Save status</button>
+  </section>
 }
 
 function Drafts({ workspace, activeJD, run }: { workspace: Workspace; activeJD?: JD; run: (action: () => Promise<unknown>, success?: string) => Promise<boolean> }) {

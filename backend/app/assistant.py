@@ -83,10 +83,11 @@ def _fallback(question: str, workspace: Workspace) -> dict:
         citations = [_citation(e, skill) for skill, e in match.evidence.items()]
         if any(word in query for word in ("certification", "certified", "degree", "salary", "availability")):
             return {"text": f"That is not established by {candidate.name}'s supplied CV or recruitment data.", "citations": []}
-        if "status" in query or "stage" in query or "assessment assigned" in query:
+        if "status" in query or "stage" in query or "assessment" in query:
             record = next((r for r in workspace.recruitment if r["candidate_id"] == candidate.id), None)
             if record:
-                return {"text": f"{candidate.name} is at the {record['stage']} stage. Assessment: {record['assessment']}.", "citations": [{"id": f"record-{candidate.id}", "source": "Sample recruitment data", "location": "record", "text": str(record)}]}
+                return {"text": f"{candidate.name} is at the {record['stage']} stage. Assessment: {record['assessment'] or 'Not recorded'}.", "citations": [{"id": f"record-{candidate.id}", "source": "Recruitment record", "location": "record", "text": str(record)}]}
+            return {"text": f"The recruitment stage and assessment are not recorded for {candidate.name}.", "citations": []}
         if "question" in query or "what should i ask" in query:
             return {"text": "\n".join(generate_questions(jd, candidate, match)), "citations": citations[:4]}
         matched = ", ".join(match.matched_required) or "none of the required skills"
@@ -111,7 +112,7 @@ def answer(question: str, workspace: Workspace, groq_client=None) -> dict:
     fallback = _fallback(question, workspace)
     if not workspace.jds:
         return fallback
-    if "not established" in fallback["text"] and not fallback["citations"]:
+    if ("not established" in fallback["text"] or "not recorded" in fallback["text"]) and not fallback["citations"]:
         return fallback
     key = os.getenv("GROQ_API_KEY")
     if not key and groq_client is None:

@@ -2,7 +2,7 @@
 
 **Live demo:** [roletrace.vercel.app](https://roletrace.vercel.app) — create an account, then add your own synthetic test documents. New accounts start with an empty workspace. No API key is required.
 
-A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; and answers questions through a floating recruiter chat.
+A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; records candidate recruitment stages; and answers questions through a floating recruiter chat.
 
 Each document can contain up to 4 MB of readable text or file data. The deployed limit leaves room beneath [Vercel's 4.5 MB request-body cap](https://vercel.com/docs/functions/limitations). The database keeps the extracted text; ordinary API responses return compact excerpts so comparisons remain usable as documents accumulate.
 
@@ -32,8 +32,8 @@ For frontend development, run `npm run dev` in `frontend/` while the Python serv
 1. Create an account. The workspace starts empty.
 2. Open **Documents**. Upload `sample_data/senior_data_engineer_jd.txt` and one or more CVs from `sample_data/`, or paste synthetic text into the separate JD and CV forms. Review the extracted required/preferred skills.
 3. Open **Compare candidates**. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
-4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions.
-5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, and “What should I ask Maya?” Open the source excerpts beneath each answer.
+4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions. Save a recruitment stage and an optional assessment note.
+5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, “What should I ask Maya?”, and “What stage is Maya at?” Open the source excerpts beneath each answer.
 6. Open **Email drafts**. Generate an interview invitation or assessment instructions, edit the text, save it, and copy it. The app does not send email.
 7. Switch light/dark mode in the top bar, then log out in the sidebar.
 

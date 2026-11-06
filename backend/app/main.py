@@ -54,6 +54,11 @@ class DraftUpdate(BaseModel):
     text: str
 
 
+class RecruitmentUpdate(BaseModel):
+    stage: str
+    assessment: str = ""
+
+
 class ChatRequest(BaseModel):
     question: str
     candidate_id: str | None = None
@@ -282,8 +287,26 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current = workspace(user)
         get_candidate(current, candidate_id)
         current.candidates = [item for item in current.candidates if item.id != candidate_id]
+        current.recruitment = [item for item in current.recruitment if item["candidate_id"] != candidate_id]
         save_workspace(user, current)
         return {"ok": True}
+
+    @app.patch("/api/candidates/{candidate_id}/recruitment")
+    def update_recruitment(candidate_id: str, body: RecruitmentUpdate, user: User = Depends(current_user)):
+        current = workspace(user)
+        get_candidate(current, candidate_id)
+        stage = body.stage.strip()
+        assessment = body.assessment.strip()
+        if not stage or len(stage) > 80 or len(assessment) > 500:
+            raise HTTPException(status_code=422, detail="Enter a stage (up to 80 characters) and an assessment note up to 500 characters.")
+        record = next((item for item in current.recruitment if item["candidate_id"] == candidate_id), None)
+        if record is None:
+            record = {"candidate_id": candidate_id, "stage": stage, "assessment": assessment}
+            current.recruitment.append(record)
+        else:
+            record.update(stage=stage, assessment=assessment)
+        save_workspace(user, current)
+        return record
 
     @app.get("/api/compare")
     def compare(user: User = Depends(current_user)):

@@ -153,3 +153,30 @@ def test_old_account_can_remove_bundled_samples_without_losing_own_documents(tmp
         assert saved["selected_jd_id"] == jd.json()["id"]
         assert saved["recruitment"] == []
         assert saved["drafts"] == []
+
+
+def test_recruitment_stage_is_recorded_per_candidate_and_grounded_in_chat(tmp_path):
+    with make_client(tmp_path) as alice:
+        register(alice, "stage-alice@example.test")
+        alice.post("/api/jds/paste", json={"title": "Engineer", "text": "Required: Python."})
+        candidate = alice.post("/api/candidates/paste", json={"name": "Stage Candidate", "text": "Built Python services."}).json()
+        before = alice.post("/api/chat", json={"question": "What stage is Stage Candidate at?"})
+        assert before.status_code == 200
+        assert "not recorded" in before.json()["text"].lower()
+        assert alice.patch(f"/api/candidates/{candidate['id']}/recruitment", json={"stage": "  "}).status_code == 422
+        saved = alice.patch(f"/api/candidates/{candidate['id']}/recruitment", json={"stage": "Recruiter screen", "assessment": "Data exercise pending"})
+        assert saved.status_code == 200
+        assert saved.json()["stage"] == "Recruiter screen"
+        answer = alice.post("/api/chat", json={"question": "What assessment is Stage Candidate assigned?"})
+        assert answer.status_code == 200
+        assert "Data exercise pending" in answer.json()["text"]
+        assert answer.json()["citations"][0]["source"] == "Recruitment record"
+        assert alice.get("/api/workspace").json()["recruitment"][0]["candidate_id"] == candidate["id"]
+        updated = alice.patch(f"/api/candidates/{candidate['id']}/recruitment", json={"stage": "Technical interview", "assessment": "Completed"})
+        assert updated.status_code == 200
+        assert len(alice.get("/api/workspace").json()["recruitment"]) == 1
+        assert alice.delete(f"/api/candidates/{candidate['id']}").status_code == 200
+        assert alice.get("/api/workspace").json()["recruitment"] == []
+    with make_client(tmp_path) as bob:
+        register(bob, "stage-bob@example.test")
+        assert bob.patch(f"/api/candidates/{candidate['id']}/recruitment", json={"stage": "Offer"}).status_code == 404

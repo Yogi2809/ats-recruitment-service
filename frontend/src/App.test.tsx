@@ -204,3 +204,42 @@ test('asking from a candidate review selects that candidate in chat', async () =
   fireEvent.click(await screen.findByRole('button', { name: /Ask about candidate/ }))
   expect((screen.getByRole('combobox', { name: 'Discussing' }) as HTMLSelectElement).value).toBe('maya')
 })
+
+test('recruiter can save a candidate stage from the review screen', async () => {
+  const match = {
+    candidate_id: 'maya', candidate_name: 'Maya Shah', score: 90,
+    required_percent: 100, preferred_percent: 0, similarity_percent: 0,
+    matched_required: ['Python'], missing_required: [],
+    matched_preferred: [], missing_preferred: [], evidence: {},
+  }
+  let current = { ...sampleWorkspace, recruitment: [] as { candidate_id: string; stage: string; assessment: string }[] }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'status@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(current)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [match] })
+    if (url.endsWith('/api/candidates/maya/analysis')) return Response.json({ candidate: sampleWorkspace.candidates[0], jd: sampleWorkspace.jds[0], match, summary: 'CV summary', questions: ['Ask about Python'] })
+    if (url.endsWith('/api/candidates/maya/recruitment') && options?.method === 'PATCH') {
+      const record = { candidate_id: 'maya', ...JSON.parse(String(options.body)) }
+      current = { ...current, recruitment: [record] }
+      return Response.json(record)
+    }
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'status@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.click(await screen.findByRole('button', { name: /01 MS Maya Shah/ }))
+  expect(await screen.findByText('No status recorded')).toBeTruthy()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Stage' }), { target: { value: 'Recruiter screen' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Assessment note' }), { target: { value: 'Data exercise pending' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save status' }))
+  expect(await screen.findByText('Current stage: Recruiter screen')).toBeTruthy()
+  expect(screen.getByText('Data exercise pending')).toBeTruthy()
+})
