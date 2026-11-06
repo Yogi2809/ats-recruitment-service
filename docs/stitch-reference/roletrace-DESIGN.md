@@ -1,76 +1,79 @@
 ---
-name: RoleTrace — Cobalt & Jade
+name: RoleTrace — Paper & Ember
 colors:
-  background: '#F6F8FC'
-  surface: '#FFFFFF'
-  surface-container: '#EEF2FA'
-  on-surface: '#15233B'
-  on-surface-variant: '#51617A'
-  outline: '#D8E1ED'
-  primary: '#3157C6'
+  background: '#F7F4EE'
+  surface: '#FFFDF8'
+  surface-container: '#EFE9DF'
+  on-surface: '#27352F'
+  on-surface-variant: '#59655C'
+  outline: '#D9D0C2'
+  primary: '#9B5742'
   on-primary: '#FFFFFF'
-  secondary: '#7553C7'
-  tertiary: '#1B8069'
-  warning: '#9A5B13'
-  error: '#B42332'
+  secondary: '#356B55'
+  tertiary: '#705A78'
+  warning: '#8A5A22'
+  error: '#AD4148'
 ---
 
-# RoleTrace design system
+# RoleTrace design system — Paper & Ember
 
-RoleTrace is an evidence-based recruiter workspace. The visual style is calm, precise, welcoming, and professional. Use cobalt as the main action color, jade for CV evidence, violet for assistant insights, and amber for points to verify. Avoid the previous teal-heavy appearance. Do not make the interface look like a gaming dashboard or a generic AI chat product.
+RoleTrace is a human-centered recruiter workspace. Its visual identity should resemble a thoughtful editorial tool: warm paper, grounded ink, natural clay, quiet sage, and a small touch of plum. It should feel welcoming, precise, and trustworthy without neon, glassmorphism, or generic AI-dashboard gradients.
 
-## Theme colors
+## Light and dark palettes
 
-Use these exact semantic colors across all screens. Theme values in the Stitch Theme tab should match this document.
-
-| Role | Light mode | Dark mode | Application |
+| Role | Name | Light mode | Dark mode |
 |---|---|---|---|
-| Canvas | `#F6F8FC` | `#0C1425` | Page background |
-| Surface | `#FFFFFF` | `#152039` | Cards, navigation, chat drawer, forms |
-| Raised surface | `#EEF2FA` | `#1D2B49` | Nested panels, hover states, table headers |
-| Main text | `#15233B` | `#F4F7FF` | Headings and body |
-| Secondary text | `#51617A` | `#AFBDD3` | Supporting copy and labels |
-| Border | `#D8E1ED` | `#334560` | Inputs, dividers, cards |
-| Primary cobalt | `#3157C6` | `#9AB0FF` | Primary buttons, links, active navigation, chatbot launcher |
-| Primary hover | `#2446A5` | `#B8C7FF` | Hover on primary controls |
-| On primary | `#FFFFFF` | `#101B34` | Text and icons on primary buttons |
-| Selected background | `#E8EDFF` | `#27345E` | Active navigation and selected tabs |
-| Evidence jade | `#1B8069` | `#56D7AE` | Found-in-CV states and matching chart segments |
-| Verification amber | `#9A5B13` | `#F6BF69` | No-evidence states and interview follow-ups |
-| Insight violet | `#7553C7` | `#B9A2FF` | Chat insights, generated content, secondary chart series |
-| Decorative coral | `#E78370` | `#FFAB98` | Tiny hero or illustration accent only |
-| Error red | `#B42332` | `#FF8E95` | Form and upload errors |
+| Page canvas | Warm Porcelain / Night Olive | `#F7F4EE` | `#191F1B` |
+| Card surface | Paper / Deep Moss | `#FFFDF8` | `#232B26` |
+| Nested surface | Oat Linen / Moss Slate | `#EFE9DF` | `#303A32` |
+| Main text | Forest Ink / Warm Ivory | `#27352F` | `#F5F0E8` |
+| Secondary text | Stone Sage / Soft Sage | `#59655C` | `#BEC8BA` |
+| Border | Sandstone / Muted Fern | `#D9D0C2` | `#455348` |
+| Control border | Dark Stone / Soft Fern | `#8A8F82` | `#7E907F` |
+| Primary action | Ember Clay / Apricot Clay | `#9B5742` | `#E7A58A` |
+| Primary hover | Fired Clay / Light Apricot | `#834431` | `#F2BA9F` |
+| Text on primary | White / Dark Ink | `#FFFFFF` | `#211D19` |
+| Selected navigation | Blush Linen / Clay Shadow | `#F3E3D9` | `#45342F` |
+| Evidence found | Forest Sage / Soft Mint | `#356B55` | `#9ACAAD` |
+| Needs verification | Deep Ochre / Honey | `#8A5A22` | `#EEC384` |
+| Assistant insight | Muted Plum / Dusty Lilac | `#705A78` | `#CBB3CF` |
+| Error | Brick Red / Soft Rose | `#AD4148` | `#F2A0A4` |
 
-Light mode uses an airy off-white canvas with white cards. Dark mode uses layered navy surfaces, never pure black. The two modes must have the same hierarchy and functionality. Do not use gradients behind tables or body text. A subtle cobalt-to-violet wash may appear only in the landing-page hero.
+Use the warm neutrals for at least 80% of each screen. Clay is the only dominant accent. Sage, ochre, and plum are reserved for meaning. Do not use all accent colors in one card. Light mode should look like crisp paper; dark mode should look like layered dark olive, never pure black.
 
 ## Semantic rules
 
-- Cobalt means an action the recruiter can take. Use it for the primary CTA, active navigation, links, and the floating chatbot icon.
-- Jade means evidence was found in the supplied CV. It does not mean a skill was independently verified.
-- Amber means the supplied CV did not establish a JD requirement. Label it `No evidence found`, not `Skill missing` or `Rejected`.
-- Violet means an assistant-generated suggestion or explanation. It does not imply factual certainty.
-- Red is reserved for actual errors. Never use it to label a candidate's rank or fit.
-- Coral is decorative. Do not use coral for small text or controls.
-- Every status has a readable text label and icon; color alone must not carry meaning.
+- Clay marks actions: primary buttons, active controls, focused inputs, links, and the floating chatbot launcher.
+- Sage marks CV evidence found. It does **not** imply independent verification of a skill or credential.
+- Ochre marks a requirement for which the CV has no evidence. Use `No evidence found`; never label a person `Rejected` or `Unqualified`.
+- Plum marks assistant-generated content and interview suggestions, not factual certainty.
+- Red is for actual form, upload, or service errors only.
+- Every chart and status includes a label and value. Color must never be the only explanation.
 
-## Typography
+## Typography and character
 
-Use Inter for headings, body, labels, forms, charts, and data tables. Use 32 px / 600 for major desktop headings, 24 px / 600 for major mobile headings, 20 px / 600 for card titles, 16 px / 400 for body text, and 14 px / 500 for labels. Use tabular numerals for scores and percentages. Avoid all-caps body copy.
+Use **Manrope** for headings and **Source Sans 3** for body text and controls. This pairing is softer and more human than an all-Inter dashboard while remaining easy to scan. If Stitch does not offer Source Sans 3, use Inter for body text. Use 32 px / 600 for desktop page headings, 24 px / 600 on mobile, 20 px / 600 for card headings, 16 px / 400 for body text, and 14 px / 500 for labels. Use tabular numerals for percentages and chart values.
+
+Use plain-language labels such as `Evidence in CV`, `Needs a follow-up`, and `How this score was calculated`. Avoid technical or robotic labels such as `telemetry`, `AI engine`, `algorithmic parity`, `verification protocol`, or `zero hallucinations`.
 
 ## Layout and components
 
-Use an 8 px spacing grid, 16–24 px card padding, 12–16 px corner radius, thin borders, and restrained shadows. The desktop app has a left navigation rail and a roomy content area. On mobile, stack content into one column and keep all primary actions reachable.
+Use an 8 px spacing grid, 16–24 px card padding, 12–16 px corner radii, subtle borders, and minimal shadows. The product should feel like a calm desk with well-organized documents. Use generous white space around important decisions and compact spacing within comparison tables.
 
-Primary buttons are filled cobalt with the matching on-primary text color. Secondary buttons are light or dark raised surfaces with cobalt text and a visible border. Inputs have a visible focus ring in cobalt. Keep hover, active, disabled, loading, error, and success states consistent in every component.
+Primary buttons use Clay with the matching on-primary text color. Secondary buttons use a neutral surface and a visible control border. Inputs use the stronger control-border color and show a clay focus ring. The softer border is for noninteractive card dividers. Cards should be mostly flat; use small changes in surface color and border instead of large drop shadows. No glossy effects, glass panels, glowing outlines, or oversized AI sparkles.
 
-The floating chatbot icon must sit above the page without covering other buttons. Clicking it opens the chat drawer or mobile sheet; clicking it must not trigger another action. The chat drawer uses the surface color with a subtle border and contains readable cited answers.
+The floating chatbot icon stays clear of sticky actions and navigation. Clicking it only opens chat. Chat uses the Paper or Deep Moss surface, with plum used sparingly for generated suggestions and clay for send actions. The drawer is comfortable for reading and never hides the entire evidence table on desktop.
 
-Charts use cobalt for overall JD alignment, jade for found evidence, amber for no evidence, and violet for assistant/contextual information. Include direct numbers, labels, and accessible text alternatives. Donut charts are paired with a breakdown table so the data remains understandable without color.
+Charts use clay for overall JD alignment, sage for evidence found, ochre for no evidence, and plum for assistant/contextual information. Pair the donut and bars with direct numbers, a score breakdown, and an evidence table. Avoid bright traffic-light grading of people.
 
-## Accuracy of product copy
+## Light and dark consistency
 
-Use `ATS-style JD alignment` for the app's own percentage. Do not claim that an external ATS produced it. Do not show invented `0 hallucinations`, `verified credentials`, `OCR`, `ATS export`, or fixed production metrics. Use synthetic sample data and label examples. A CV mention is document evidence, not independent skill verification.
+Every screen—including login, account creation, overview, JD/CV inputs, comparison, candidate detail, drafts, and chat—must have both themes. Keep layouts, hierarchy, and interactions the same. Dark cards must remain visually separate from the dark canvas, with legible borders and text. Use the visible theme toggle and respect the browser's initial light/dark preference.
+
+## Content accuracy
+
+Call the percentage `ATS-style JD alignment`; it is this app's own comparison, not a score from an external ATS. Do not include invented system metrics, fixed candidate percentages presented as real results, independent credential verification, OCR, ATS export, or email sending. Sample candidate data must be labeled synthetic. A CV mention supports only the statement that the CV mentions it.
 
 ## Motion and accessibility
 
-Use subtle 150–220 ms transitions for menus, tabs, drawers, and chart filters. Respect reduced-motion preferences. Keep normal text at least 4.5:1 contrast and meaningful UI boundaries at least 3:1 where applicable. Show visible keyboard focus and use touch targets at least 44 px. Do not rely on color alone for any chart, status, or validation error.
+Use gentle 150–220 ms transitions for drawers, menus, tabs, and filters. Respect reduced-motion preference. Aim for at least 4.5:1 contrast for normal text and 3:1 for meaningful interface graphics. Keep visible focus states, clear form errors, and touch targets of at least 44 px. Never convey a chart result or error through color alone.

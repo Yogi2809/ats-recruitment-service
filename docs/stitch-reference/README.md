@@ -14,7 +14,7 @@ The project theme is in [design-system.md](design-system.md). These files are vi
 ## Adaptation notes
 
 - The Stitch project currently has four desktop screens. It does not include mobile variants, dark variants, or a standalone Drafts screen. Follow `docs/stitch-ui-brief.md` for those states.
-- Keep the teal/indigo palette, Inter typography, left navigation, comparison cards, evidence table, and floating assistant.
+- Keep the left navigation, comparison cards, evidence table, and floating assistant. Replace Stitch's original teal/indigo palette with the Paper & Ember colors and Manrope/Source Sans 3 typography in `roletrace-DESIGN.md`.
 - Replace hard-coded 91%, 74%, and 52% mock scores with scores actually calculated from the sample CV/JD data. The mockup's `70% required / 30% preferred` text conflicts with the approved `70% required / 20% preferred / 10% text similarity` formula.
 - Remove unsupported statements such as `0 hallucinations`, `verified credentials`, `AI semantic parser`, `audit guarantee`, `Engine v2.4`, `evaluation locked`, and `1-click export to ATS`. Evidence from a CV supports a claim only about what the CV says, not independent verification.
 - Do not offer OCR unless implemented. A scanned PDF should show a text-extraction failure and suggest pasting text.

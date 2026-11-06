@@ -98,23 +98,24 @@ Use two clearly separated panels with equal visual weight on desktop, stacked on
 
 ## Theme and visual tokens
 
-Use the same information hierarchy in both themes, with a visible theme toggle and system preference as initial default. Palette should be professional with teal as the action color, indigo as the insight color, and amber for items to verify. Use color with text labels and icons, never as the sole status signal.
+Use the same information hierarchy in both themes, with a visible theme toggle and system preference as initial default. Use the human-centered **Paper & Ember** palette in `docs/stitch-reference/roletrace-DESIGN.md`: clay for action, sage for CV evidence, plum for assistant insights, and ochre for items to verify. Use color with text labels and icons, never as the sole status signal.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| Canvas | `#F7F9FC` | `#0B1220` | Page background |
-| Surface | `#FFFFFF` | `#141E2E` | Cards, drawers, modals |
-| Raised surface | `#EDF3F7` | `#1B2A3D` | Hover and nested panels |
-| Primary text | `#172338` | `#F1F6FC` | Headings and body |
-| Secondary text | `#526277` | `#A9B9CC` | Explanatory text |
-| Brand/action | `#087E83` | `#37C6BE` | Primary buttons, links, selected states |
-| Insight | `#5146B9` | `#A79BFF` | Charts and AI cues |
-| Positive | `#087F59` | `#48D6A0` | Found evidence |
-| Verify | `#9A6700` | `#F5C76A` | No evidence / follow-up |
-| Border | `#DCE5EC` | `#314258` | Dividers, input outlines |
-| Focus ring | `#0B8F92` | `#7CE4DC` | Keyboard focus |
+| Canvas | `#F7F4EE` | `#191F1B` | Page background |
+| Surface | `#FFFDF8` | `#232B26` | Cards, drawers, modals |
+| Raised surface | `#EFE9DF` | `#303A32` | Hover and nested panels |
+| Primary text | `#27352F` | `#F5F0E8` | Headings and body |
+| Secondary text | `#59655C` | `#BEC8BA` | Explanatory text |
+| Brand/action | `#9B5742` | `#E7A58A` | Primary buttons, links, selected states |
+| Insight | `#705A78` | `#CBB3CF` | Assistant cues and secondary charts |
+| Positive | `#356B55` | `#9ACAAD` | Found evidence |
+| Verify | `#8A5A22` | `#EEC384` | No evidence / follow-up |
+| Border | `#D9D0C2` | `#455348` | Subtle dividers and card outlines |
+| Control border | `#8A8F82` | `#7E907F` | Inputs and other meaningful boundaries |
+| Focus ring | `#9B5742` | `#E7A58A` | Keyboard focus |
 
-- Typography: use Inter or a similar highly legible sans-serif. Headings 28–32 px desktop and 24 px mobile; body 15–16 px; labels 13–14 px. Use tabular numerals for scores.
+- Typography: use Manrope for headings and Source Sans 3 for body text, with Inter as a fallback. Headings 28–32 px desktop and 24 px mobile; body 15–16 px; labels 13–14 px. Use tabular numerals for scores.
 - Spacing: 8 px grid, 16–24 px card padding, 12–16 px corner radii, restrained shadows. Make the charts colorful but keep data labels high contrast.
 - Motion: 150–220 ms transitions for drawer, tabs, hover, and chart filtering. Respect reduced-motion preference. Avoid parallax and celebratory effects for candidate ranking.
 - Accessibility: aim for WCAG AA contrast, visible focus, keyboard navigation, screen-reader labels for charts and upload controls, chart text alternatives, and touch targets at least 44 px.
