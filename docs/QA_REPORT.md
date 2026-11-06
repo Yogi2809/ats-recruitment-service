@@ -70,6 +70,7 @@ The login form and main controls expose labels, error messages, a visible keyboa
 - **Status answers without saved data:** chat now says “not recorded.” The review page lets the recruiter save the stage and assessment that chat later cites.
 - **Duplicate chat action:** candidate review uses the floating chat launcher. The candidate remains selected when chat opens.
 - **Optional LLM grounding:** an uncited model answer to a candidate-skill query falls back to the computed, cited answer.
+- **Refresh after a release:** an already-open test tab could reuse an older HTML file whose JavaScript bundle had been removed, leaving a blank page. HTML now returns `Cache-Control: no-store`, and several prior versioned assets are retained in the deployed package so an older page can still load during the transition.
 
 ## Remaining risks and test limits
 

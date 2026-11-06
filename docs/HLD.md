@@ -62,6 +62,7 @@ Without Groq, chat uses computed matches, CV excerpts, saved recruitment records
 - The backend enforces a 4 MiB limit per file or pasted document. The browser checks files before uploading. This fits beneath [Vercel's 4.5 MB function request-body limit](https://vercel.com/docs/functions/limitations); requests also carry multipart overhead.
 - API responses return short evidence excerpts. Full extracted text stays in the database for matching and later questions. Large documents therefore do not automatically make every comparison response huge.
 - Vercel hosts the public UI and API; Neon Postgres keeps accounts and workspaces across Vercel instances and restarts. `DATABASE_URL`, `SECRET_KEY`, and optional `GROQ_API_KEY` are server-side environment variables.
+- The HTML entry page is served with `Cache-Control: no-store`. Compiled asset names include content hashes, and the build retains recent older assets so an open tab can refresh safely when a new release goes live.
 
 **Concurrency limit:** independent accounts have separate rows and were tested with simultaneous writes. Two concurrent writes to the *same* account still update one JSON payload and can overwrite each other; this prototype has no optimistic version check. There is also no email verification, password reset, OCR, virus scanning, rate limiting, formal accessibility certification, or hiring bias validation. These are explicit production-hardening work, not demonstrated guarantees.
 

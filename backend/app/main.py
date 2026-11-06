@@ -379,7 +379,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             target = frontend / path
             if path and target.is_file() and target.resolve().is_relative_to(frontend.resolve()):
                 return FileResponse(target)
-            return FileResponse(frontend / "index.html")
+            return FileResponse(frontend / "index.html", headers={"Cache-Control": "no-store"})
 
     return app
 
