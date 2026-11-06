@@ -43,7 +43,7 @@ def extract_document(filename: str, data: bytes) -> list[Evidence]:
             for table_i, table in enumerate(doc.tables, 1):
                 for row_i, row in enumerate(table.rows, 1):
                     values.append((f"table {table_i} row {row_i}", " | ".join(cell.text for cell in row.cells)))
-    except (UnicodeError, OSError, ValueError, Exception) as exc:
+    except Exception as exc:
         # Parser exceptions vary by document library and malformed file type.
         raise ValueError("Could not read this document. Try another file or paste its text.") from exc
     return _chunks(filename, values)

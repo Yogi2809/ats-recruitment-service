@@ -1,0 +1,4 @@
+Maya Shah — synthetic candidate
+Built Python data pipelines using PostgreSQL and SQL.
+Designed and maintained Airflow DAGs for scheduled ingestion.
+Deployed workloads on AWS S3 and EC2.

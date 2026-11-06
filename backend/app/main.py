@@ -1,8 +1,11 @@
 from dataclasses import asdict
+import os
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .auth import AuthStore, User, create_auth_store
@@ -98,7 +101,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             "roletrace_session",
             store.sign(user.id, remember),
             httponly=True,
-            secure=False,
+            secure=os.getenv("APP_ENV") == "production",
             samesite="lax",
             max_age=7 * 86400 if remember else None,
         )
@@ -271,6 +274,19 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             if candidate.name.lower() not in question.lower():
                 question = f"About {candidate.name}: {question}"
         return answer(question, current)
+
+    frontend = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if (frontend / "index.html").exists() and (frontend / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=frontend / "assets"), name="assets")
+
+        @app.get("/{path:path}")
+        def serve_frontend(path: str):
+            if path.startswith(("api/", "assets/")):
+                raise HTTPException(status_code=404, detail="Not found.")
+            target = frontend / path
+            if path and target.is_file() and target.resolve().is_relative_to(frontend.resolve()):
+                return FileResponse(target)
+            return FileResponse(frontend / "index.html")
 
     return app
 

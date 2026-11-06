@@ -1,0 +1,4 @@
+Full Stack Engineer
+Required: React, TypeScript, FastAPI, PostgreSQL.
+Deliver accessible web applications and APIs.
+Preferred: Docker.

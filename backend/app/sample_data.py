@@ -33,7 +33,7 @@ def sample_workspace() -> Workspace:
         )),
         Candidate("arjun", "Arjun Rao", extract_paste(
             "Arjun Rao — synthetic candidate\nDeveloped Python ETL and SQL reporting pipelines. "
-            "Used AWS S3 for data storage. Airflow exposure is not described."
+            "Used AWS S3 for data storage."
         )),
         Candidate("neha", "Neha Iyer", extract_paste(
             "Neha Iyer — synthetic candidate\nBuilt Python services and PostgreSQL databases. "
