@@ -133,7 +133,7 @@ export default function App() {
         </>}
       </main>
     </div>
-    {!chatOpen && <button className="chat-launcher" aria-label="Open recruiter assistant" title="Open recruiter assistant" onClick={() => setChatOpen(true)}><MessageCircle size={25} /><span>Ask RoleTrace</span></button>}
+    {!chatOpen && <button className="chat-launcher" aria-label="Open recruiter assistant" title="Open recruiter assistant" onClick={() => setChatOpen(true)}><MessageCircle size={25} /></button>}
     {chatOpen && <ChatDrawer workspace={workspace} initialCandidateId={page === 'candidate' ? analysis?.candidate.id : undefined} onClose={() => setChatOpen(false)} />}
   </div>
 }
