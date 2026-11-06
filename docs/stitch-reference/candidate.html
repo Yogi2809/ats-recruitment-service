@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"tertiary-container":"#0e815b","secondary-fixed":"#e4dfff","on-primary-container":"#defdff","inverse-on-surface":"#ebf1ff","error":"#ba1a1a","on-secondary-container":"#26108f","on-tertiary-fixed-variant":"#005137","on-secondary-fixed":"#140067","on-tertiary-fixed":"#002114","background":"#f9f9ff","tertiary":"#006646","secondary":"#584dc0","surface-bright":"#f9f9ff","tertiary-fixed-dim":"#78d9ac","tertiary-fixed":"#94f6c7","inverse-primary":"#79d5da","surface-variant":"#d9e3f8","on-primary":"#ffffff","on-surface":"#121c2b","outline-variant":"#bdc9c9","surface-container-highest":"#d9e3f8","on-surface-variant":"#3e4949","primary-fixed":"#96f1f7","on-tertiary-container":"#ddffeb","surface":"#f9f9ff","primary-container":"#087e83","on-tertiary":"#ffffff","outline":"#6e797a","on-error-container":"#93000a","surface-tint":"#00696d","secondary-fixed-dim":"#c5c0ff","surface-container-lowest":"#ffffff","on-primary-fixed-variant":"#004f53","on-background":"#121c2b","primary":"#006367","error-container":"#ffdad6","primary-fixed-dim":"#79d5da","inverse-surface":"#273141","on-secondary-fixed-variant":"#4033a7","on-primary-fixed":"#002021","on-error":"#ffffff","on-secondary":"#ffffff","surface-container":"#e7eeff","surface-container-low":"#f0f3ff","surface-container-high":"#dee8fe","secondary-container":"#9087fd","surface-dim":"#d0daef"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-md":"1rem","gutter-desktop":"1.5rem","space-sm":"0.5rem","margin-desktop":"2rem","gutter":"1rem","space-xl":"2rem","space-xs":"0.25rem","space-lg":"1.5rem","margin":"1rem"},"fontFamily":{"tabular-numeric-sm":["Inter"],"body-sm":["Inter"],"label-md":["Inter"],"headline-xl-mobile":["Inter"],"label-lg":["Inter"],"tabular-numeric-lg":["Inter"],"headline-sm":["Inter"],"headline-xl":["Inter"],"headline-lg":["Inter"],"body-md":["Inter"],"label-sm":["Inter"],"headline-md":["Inter"],"tabular-numeric-md":["Inter"],"body-lg":["Inter"]},"fontSize":{"tabular-numeric-sm":["12px",{"lineHeight":"16px","fontWeight":"500"}],"body-sm":["12px",{"lineHeight":"18px","fontWeight":"400"}],"label-md":["12px",{"lineHeight":"16px","fontWeight":"500"}],"headline-xl-mobile":["26px",{"lineHeight":"34px","fontWeight":"600"}],"label-lg":["14px",{"lineHeight":"20px","fontWeight":"500"}],"tabular-numeric-lg":["22px",{"lineHeight":"28px","fontWeight":"600"}],"headline-sm":["16px",{"lineHeight":"24px","fontWeight":"600"}],"headline-xl":["32px",{"lineHeight":"40px","fontWeight":"600"}],"headline-lg":["24px",{"lineHeight":"32px","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","fontWeight":"600"}],"tabular-numeric-md":["14px",{"lineHeight":"20px","fontWeight":"500"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm"><div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container"><span class="material-symbols-outlined text-[20px]">psychology</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Recruiter AI</span><span class="font-label-sm text-label-sm text-on-surface-variant">Intelligence Workspace</span></div></div><div class="px-space-md py-space-sm"><div class="h-[1px] w-full bg-surface-container-highest"></div></div><nav class="flex flex-col gap-space-xs px-space-sm" data-active-classes="bg-primary-container text-on-primary-container font-headline-sm font-semibold"><a class="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-[20px]">dashboard</span><span class="font-label-lg text-label-lg">Overview</span></a><a class="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="jobs-and-cvs" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="font-label-lg text-label-lg">Jobs & CVs</span></a><a aria-current="page" class="flex items-center gap-space-md px-space-md py-space-sm rounded-lg transition-colors bg-primary-container text-on-primary-container font-headline-sm font-semibold" data-path="compare" href="#"><span class="material-symbols-outlined text-[20px]">compare_arrows</span><span class="font-label-lg text-label-lg">Compare</span></a><a class="flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="drafts" href="#"><span class="material-symbols-outlined text-[20px]">edit_document</span><span class="font-label-lg text-label-lg">Drafts</span></a></nav></div><div class="p-space-md flex flex-col gap-space-sm bg-surface-container-lowest/50 m-space-sm rounded-lg"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">System Status</span><span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span></span></div><div class="flex items-center gap-space-sm"><span class="font-tabular-numeric-sm text-tabular-numeric-sm text-on-surface font-semibold">Engine v2.4</span><span class="font-label-sm text-label-sm text-tertiary bg-on-tertiary-container px-space-xs rounded">Optimal</span></div></div></aside><div class="pl-[240px]"><header class="fixed top-0 left-[240px] right-0 h-16 bg-surface/80 backdrop-blur-xl z-40 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full max-w-[1440px] mx-auto px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md min-w-0"><button class="flex items-center gap-space-sm px-space-md py-space-xs rounded-lg bg-surface-container-lowest hover:bg-surface-container-high hover:text-on-surface text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-primary text-[18px]">work</span><span class="font-label-lg text-label-lg truncate">Senior Data Engineer (3 candidates)</span><span class="material-symbols-outlined text-on-surface-variant text-[18px]">arrow_drop_down</span></button><span class="hidden sm:inline-flex items-center px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm tracking-wide uppercase">Sample Data</span></div><div class="flex items-center gap-space-md shrink-0"><div class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-md text-label-md"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span></span><span>AI connected</span></div><button aria-label="Toggle theme" class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">light_mode</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface"><div class="w-full max-w-[1440px] mx-auto px-gutter-desktop py-space-lg"><div class="flex flex-col w-full relative">
+<!-- Top Navigation & Breadcrumbs / Back Bar -->
+<div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
+<div class="flex items-center gap-space-sm">
+<button class="group flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-all" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+<span class="font-label-lg text-label-lg">Back to shortlist</span>
+</button>
+<div class="flex items-center gap-space-xs px-space-sm py-space-xs text-on-surface-variant">
+<span class="font-label-md text-label-md">Compare</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Maya Shah</span>
+</div>
+</div>
+<!-- Quick Action Bar -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-on-surface shadow-sm transition-colors" onclick="switchPrepTab('summary')" type="button">
+<span class="material-symbols-outlined text-primary text-[18px]">summarize</span>
+<span class="font-label-lg text-label-lg">Generate summary</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-on-surface shadow-sm transition-colors" onclick="switchPrepTab('questions')" type="button">
+<span class="material-symbols-outlined text-secondary text-[18px]">quiz</span>
+<span class="font-label-lg text-label-lg">Create interview questions</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-on-surface shadow-sm transition-colors" onclick="switchPrepTab('email')" type="button">
+<span class="material-symbols-outlined text-primary text-[18px]">mail</span>
+<span class="font-label-lg text-label-lg">Draft email</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary hover:bg-primary-container text-on-primary shadow-sm transition-colors" onclick="toggleAssistant(true)" type="button">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span class="font-label-lg text-label-lg">Ask Assistant</span>
+</button>
+</div>
+</div>
+<!-- Candidate Identity Header Card -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-lowest p-space-lg mb-space-lg shadow-sm">
+<div class="absolute -right-24 -top-24 w-80 h-80 rounded-full bg-primary-fixed/30 blur-3xl pointer-events-none"></div>
+<div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
+<div class="flex items-start sm:items-center gap-space-lg min-w-0">
+<div class="relative shrink-0">
+<div class="w-16 h-16 rounded-xl bg-surface-container flex items-center justify-center text-primary font-headline-lg text-headline-lg shadow-inner">
+            MS
+          </div>
+<span class="absolute -bottom-1 -right-1 flex h-4 w-4">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-4 w-4 bg-tertiary text-on-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px]">check</span>
+</span>
+</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex flex-wrap items-center gap-space-sm mb-space-xs">
+<h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight truncate">Maya Shah</h1>
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+              Strong alignment
+            </span>
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">attachment</span>
+              Sample CV (Uploaded)
+            </span>
+</div>
+<div class="flex flex-wrap items-center gap-space-md text-on-surface-variant">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">work_outline</span>
+<span class="font-body-md text-body-md font-medium text-on-surface">Senior Data Engineer</span>
+</div>
+<span class="text-surface-variant">•</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+              San Francisco, CA (Hybrid)
+            </div>
+<span class="text-surface-variant">•</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+              Uploaded 2h ago
+            </div>
+</div>
+</div>
+</div>
+<!-- Hero Alignment Metric Badge -->
+<div class="flex items-center gap-space-lg self-start lg:self-center shrink-0 p-space-md rounded-xl bg-surface-container-low">
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Composite Score</span>
+<span class="font-headline-sm text-headline-sm text-primary">JD Alignment</span>
+</div>
+<div class="h-10 w-[1px] bg-surface-container-highest"></div>
+<div class="flex items-baseline gap-1">
+<span class="font-tabular-numeric-lg text-[40px] leading-none font-bold text-on-surface tracking-tight">91</span>
+<span class="font-headline-md text-headline-md text-primary font-bold">%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid: Visual Comparison & Semantic Signals -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg mb-space-lg">
+<!-- Left: Alignment Donut + Narrative (5 Cols) -->
+<div class="xl:col-span-5 flex flex-col justify-between p-space-lg rounded-xl bg-surface-container-lowest shadow-sm">
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">donut_large</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">ATS Alignment Index</h2>
+</div>
+<span class="px-space-xs py-0.5 rounded text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-semibold">Tier 1 Match</span>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-space-lg my-space-sm">
+<!-- SVG Donut Chart -->
+<div class="relative w-36 h-36 shrink-0 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 100 100">
+<!-- Background circle -->
+<circle class="stroke-surface-container" cx="50" cy="50" fill="none" r="40" stroke-width="8"></circle>
+<!-- Progress circle: 91% of circumference (2 * pi * 40 = 251.32) -> offset = 251.32 * (1 - 0.91) = 22.6 -->
+<circle class="stroke-primary" cx="50" cy="50" fill="none" r="40" stroke-dasharray="251.32" stroke-dashoffset="22.6" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-tabular-numeric-lg text-tabular-numeric-lg font-bold text-on-surface leading-none">91%</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">JD fit</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-xs text-left">
+<p class="font-body-md text-body-md text-on-surface leading-relaxed">
+            High alignment driven by verified evidence across <span class="font-semibold text-primary">all 4 core required skills</span> and demonstrated <span class="font-semibold text-primary">AWS architecture experience</span>.
+          </p>
+<div class="flex items-center gap-space-xs mt- space-xs text-tertiary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>Zero critical requirement gaps detected</span>
+</div>
+</div>
+</div>
+<!-- Grouped Horizontal Bars -->
+<div class="pt-space-md mt-space-md flex flex-col gap-space-sm">
+<div>
+<div class="flex justify-between items-center text-label-md font-label-md mb-1">
+<span class="text-on-surface font-medium">Required skills (100%)</span>
+<span class="font-tabular-numeric-sm text-tabular-numeric-sm text-tertiary font-semibold">4 / 4 verified</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden flex">
+<div class="h-full bg-tertiary rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center text-label-md font-label-md mb-1">
+<span class="text-on-surface font-medium">Preferred skills (85%)</span>
+<span class="font-tabular-numeric-sm text-tabular-numeric-sm text-secondary font-semibold">AWS architecture evidenced</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden flex">
+<div class="h-full bg-secondary rounded-full" style="width: 85%;"></div>
+<div class="h-full bg-surface-container-highest" style="width: 15%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center text-label-md font-label-md mb-1">
+<span class="text-on-surface font-medium">JD language similarity</span>
+<span class="font-tabular-numeric-sm text-tabular-numeric-sm text-on-surface-variant font-semibold">88 / 100 semantic overlap</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden flex">
+<div class="h-full bg-primary-container rounded-full" style="width: 88%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Transparent Scoring Rubric & Terminology Strip (7 Cols) -->
+<div class="xl:col-span-7 flex flex-col gap-space-md">
+<!-- Formula Breakdown -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">calculate</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Transparent Evidence Weighting</h3>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Model: Engine v2.4</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-sm my-space-sm">
+<div class="p-space-md rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-headline-md text-headline-md font-bold text-primary">70%</span>
+<span class="font-label-lg text-label-lg font-semibold text-on-surface mt-1">Required Skills</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Core non-negotiable competencies</span>
+</div>
+<div class="p-space-md rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-headline-md text-headline-md font-bold text-secondary">20%</span>
+<span class="font-label-lg text-label-lg font-semibold text-on-surface mt-1">Preferred Skills</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Bonus domain accelerators</span>
+</div>
+<div class="p-space-md rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">10%</span>
+<span class="font-label-lg text-label-lg font-semibold text-on-surface mt-1">Text Overlap</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Contextual vocabulary match</span>
+</div>
+</div>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container flex items-center gap-space-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary shrink-0">info</span>
+<p class="font-body-sm text-body-sm">
+<strong class="font-semibold text-on-surface">Audit guarantee:</strong> Category weight is redistributed proportionally if criteria are empty. Zero mystery scores or black-box algorithms.
+          </p>
+</div>
+</div>
+<!-- JD Terminology Strip -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">spellcheck</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">JD Vocabulary Detection</h3>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Non-skill domain terms</span>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm my-1">
+<!-- Seen terms -->
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed text-label-md font-label-md font-medium cursor-pointer hover:opacity-90">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>ETL optimization</span>
+<span class="text-[10px] bg-tertiary text-on-tertiary px-1 rounded">p.1</span>
+</div>
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed text-label-md font-label-md font-medium cursor-pointer hover:opacity-90">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>CI/CD pipelines</span>
+<span class="text-[10px] bg-tertiary text-on-tertiary px-1 rounded">p.2</span>
+</div>
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed text-label-md font-label-md font-medium cursor-pointer hover:opacity-90">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>SLA monitoring</span>
+<span class="text-[10px] bg-tertiary text-on-tertiary px-1 rounded">p.2</span>
+</div>
+<!-- Unseen term -->
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-lg bg-error-container text-on-error-container text-label-md font-label-md font-medium cursor-pointer hover:opacity-90">
+<span class="material-symbols-outlined text-[16px]">search_off</span>
+<span>Data lakehouse</span>
+<span class="text-[10px] bg-error text-on-error px-1 rounded">unseen</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant italic">
+          Term overlap contributes to text similarity; missing phrases like "Data lakehouse" may be represented as "S3/Athena storage patterns" in candidate CV.
+        </p>
+</div>
+</div>
+</div>
+<!-- Evidence & Requirements Auditing Section -->
+<div class="rounded-xl bg-surface-container-lowest p-space-lg mb-space-lg shadow-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Verified Skills & Evidence Matrix</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Inline citation excerpts extracted directly from candidate resume</p>
+</div>
+<!-- Filter Chips & Search Bar -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<div class="flex items-center bg-surface-container-low rounded-lg p-1">
+<button class="skill-filter-btn active px-space-sm py-1 rounded-md text-label-md font-label-md bg-surface-container-lowest text-on-surface shadow-sm font-semibold" onclick="filterSkills('all')" type="button">All (5)</button>
+<button class="skill-filter-btn px-space-sm py-1 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface" onclick="filterSkills('required')" type="button">Required (4)</button>
+<button class="skill-filter-btn px-space-sm py-1 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface" onclick="filterSkills('preferred')" type="button">Preferred (1)</button>
+<button class="skill-filter-btn px-space-sm py-1 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface" onclick="filterSkills('found')" type="button">Found (5)</button>
+<button class="skill-filter-btn px-space-sm py-1 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface" onclick="filterSkills('missing')" type="button">No evidence (0)</button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-[18px] text-on-surface-variant">search</span>
+<input class="w-48 pl-8 pr-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container-highest transition-colors" placeholder="Search skill or quote..." type="text"/>
+</div>
+</div>
+</div>
+<!-- Skills Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
+<th class="py-space-sm px-space-md rounded-l-lg">JD Requirement</th>
+<th class="py-space-sm px-space-md">Priority</th>
+<th class="py-space-sm px-space-md">CV Status</th>
+<th class="py-space-sm px-space-md">Evidence Citation</th>
+<th class="py-space-sm px-space-md rounded-r-lg text-right">Verification Action</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface font-body-md text-body-md">
+<!-- Row 1: Python -->
+<tr class="skill-row hover:bg-surface-container-low transition-colors" data-category="required found">
+<td class="py-space-md px-space-md font-headline-sm text-headline-sm text-on-surface">
+              Python
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex px-space-sm py-0.5 rounded text-label-sm font-label-sm bg-primary-fixed text-on-primary-fixed font-semibold">Required</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Found
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-md">
+<div class="p-space-sm rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface">
+<span class="text-primary font-semibold">“</span>5+ years backend data scripting, PySpark and pandas data cleaning<span class="text-primary font-semibold">”</span>
+<span class="ml-2 inline-flex items-center gap-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px]">description</span> Page 1, Experience
+                </span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" onclick="askQuestionAbout('Python scripting at scale')" title="Probe this skill" type="button">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: SQL -->
+<tr class="skill-row hover:bg-surface-container-low transition-colors" data-category="required found">
+<td class="py-space-md px-space-md font-headline-sm text-headline-sm text-on-surface">
+              SQL
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex px-space-sm py-0.5 rounded text-label-sm font-label-sm bg-primary-fixed text-on-primary-fixed font-semibold">Required</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Found
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-md">
+<div class="p-space-sm rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface">
+<span class="text-primary font-semibold">“</span>Expert in PostgreSQL & BigQuery query optimization, window functions<span class="text-primary font-semibold">”</span>
+<span class="ml-2 inline-flex items-center gap-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px]">description</span> Page 2
+                </span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" onclick="askQuestionAbout('BigQuery query optimization')" title="Probe this skill" type="button">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Airflow -->
+<tr class="skill-row hover:bg-surface-container-low transition-colors" data-category="required found">
+<td class="py-space-md px-space-md font-headline-sm text-headline-sm text-on-surface">
+              Apache Airflow
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex px-space-sm py-0.5 rounded text-label-sm font-label-sm bg-primary-fixed text-on-primary-fixed font-semibold">Required</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Found
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-md">
+<div class="p-space-sm rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface">
+<span class="text-primary font-semibold">“</span>Led migration of 40+ cron jobs to Airflow DAGs, orchestrated daily pipelines<span class="text-primary font-semibold">”</span>
+<span class="ml-2 inline-flex items-center gap-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px]">description</span> Page 2
+                </span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" onclick="askQuestionAbout('Airflow DAG migration architecture')" title="Probe this skill" type="button">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Data Pipelines -->
+<tr class="skill-row hover:bg-surface-container-low transition-colors" data-category="required found">
+<td class="py-space-md px-space-md font-headline-sm text-headline-sm text-on-surface">
+              Data Pipelines
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex px-space-sm py-0.5 rounded text-label-sm font-label-sm bg-primary-fixed text-on-primary-fixed font-semibold">Required</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Found
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-md">
+<div class="p-space-sm rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface">
+<span class="text-primary font-semibold">“</span>Designed real-time event ingestion streaming 2M events/sec<span class="text-primary font-semibold">”</span>
+<span class="ml-2 inline-flex items-center gap-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px]">description</span> Page 1
+                </span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" onclick="askQuestionAbout('2M events per second ingestion')" title="Probe this skill" type="button">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: AWS -->
+<tr class="skill-row hover:bg-surface-container-low transition-colors" data-category="preferred found">
+<td class="py-space-md px-space-md font-headline-sm text-headline-sm text-on-surface">
+              AWS Ecosystem
+            </td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex px-space-sm py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed font-semibold">Preferred</span>
+</td>
+<td class="py-space-md px-space-md">
+<span class="inline-flex items-center gap-1 px-space-sm py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary-fixed text-on-tertiary-fixed font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Found
+              </span>
+</td>
+<td class="py-space-md px-space-md max-w-md">
+<div class="p-space-sm rounded-lg bg-surface-container font-body-sm text-body-sm text-on-surface">
+<span class="text-secondary font-semibold">“</span>Provisioned S3, EMR, Athena, IAM policies via Terraform<span class="text-secondary font-semibold">”</span>
+<span class="ml-2 inline-flex items-center gap-0.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px]">description</span> Page 3
+                </span>
+</div>
+</td>
+<td class="py-space-md px-space-md text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" onclick="askQuestionAbout('Terraform AWS provisioning')" title="Probe this skill" type="button">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-space-md p-space-sm rounded-lg bg-surface-container-low flex items-center justify-between text-on-surface-variant">
+<div class="flex items-center gap-space-xs font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span><strong class="font-medium text-on-surface">Note:</strong> "No evidence found" does not mean the candidate lacks this skill, only that it is not explicitly stated in the source document.</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary cursor-pointer hover:underline">Download raw extraction JSON</span>
+</div>
+</div>
+<!-- Recruiter Preparation Workspace (Interactive Tabs) -->
+<div class="rounded-xl bg-surface-container-lowest p-space-lg mb-space-xl shadow-sm">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md pb-space-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Candidate Preparation Workspace</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Grounded synthesis, probing questions, and invite generation</p>
+</div>
+<!-- Segmented Tabs -->
+<div class="flex items-center bg-surface-container-low p-1 rounded-xl">
+<button class="prep-tab-btn active px-space-md py-space-xs rounded-lg font-label-lg text-label-lg font-semibold bg-surface-container-lowest text-on-surface shadow-sm transition-all flex items-center gap-1.5" id="tab-btn-summary" onclick="switchPrepTab('summary')" type="button">
+<span class="material-symbols-outlined text-[18px]">feed</span>
+<span>Summary</span>
+</button>
+<button class="prep-tab-btn px-space-md py-space-xs rounded-lg font-label-lg text-label-lg font-medium text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1.5" id="tab-btn-questions" onclick="switchPrepTab('questions')" type="button">
+<span class="material-symbols-outlined text-[18px]">quiz</span>
+<span>Interview questions</span>
+</button>
+<button class="prep-tab-btn px-space-md py-space-xs rounded-lg font-label-lg text-label-lg font-medium text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1.5" id="tab-btn-email" onclick="switchPrepTab('email')" type="button">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+<span>Email draft</span>
+</button>
+</div>
+</div>
+<!-- Tab 1: Summary Pane -->
+<div class="prep-panel pt-space-md" id="prep-panel-summary">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">
+<div class="lg:col-span-2 flex flex-col gap-space-md">
+<div class="p-space-lg rounded-xl bg-surface-container-low flex flex-col gap-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary font-semibold">Evidence Synthesis</span>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed">
+              Maya Shah demonstrates an exceptionally strong profile for the <strong class="font-semibold text-primary">Senior Data Engineer</strong> role. Her recent work at DataCorp emphasizes high-throughput data streaming (2M events/sec) and substantial orchestration leadership, specifically consolidating legacy crons into structured Airflow DAGs.
+            </p>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              Her technical breadth covers both core processing requirements (Python, PySpark, PostgreSQL, BigQuery) and cloud infrastructure provisioning via Terraform on AWS. The CV displays high quantitative rigor with clear engineering outcome ownership.
+            </p>
+</div>
+<div class="p-space-lg rounded-xl bg-surface-container-low flex flex-col gap-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">Points to Probe During Screen</span>
+<ul class="flex flex-col gap-space-sm text-on-surface font-body-md text-body-md">
+<li class="flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[18px] mt-0.5">help_center</span>
+<span>Extent of hands-on data lakehouse architecture (Delta Lake / Iceberg), since terminology was unreferenced despite heavy S3/Athena usage.</span>
+</li>
+<li class="flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[18px] mt-0.5">help_center</span>
+<span>Team leadership vs individual contributor scope during the 40+ Airflow job migration project.</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="p-space-lg rounded-xl bg-surface-container flex flex-col justify-between">
+<div class="flex flex-col gap-space-sm">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Candidate Overview Facts</h4>
+<div class="flex flex-col gap-space-xs py-space-xs border-b border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Total Relevant Experience</span>
+<span class="font-tabular-numeric-md text-tabular-numeric-md font-semibold text-on-surface">6.5 Years</span>
+</div>
+<div class="flex flex-col gap-space-xs py-space-xs border-b border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Current / Recent Company</span>
+<span class="font-body-md text-body-md font-semibold text-on-surface">DataCorp (Staff Data Eng)</span>
+</div>
+<div class="flex flex-col gap-space-xs py-space-xs border-b border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Education</span>
+<span class="font-body-md text-body-md font-semibold text-on-surface">B.S. Computer Science (2018)</span>
+</div>
+<div class="flex flex-col gap-space-xs py-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Notice Period / Availability</span>
+<span class="font-body-md text-body-md font-semibold text-on-surface">2 Weeks (Immediate)</span>
+</div>
+</div>
+<button class="mt-space-md w-full flex items-center justify-center gap-space-xs py-space-xs rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors font-label-md text-label-md shadow-sm" onclick="navigator.clipboard.writeText('Maya Shah: 6.5 Years Data Eng, strong Airflow & 2M events/sec streaming, verified AWS Terraform.'); alert('Candidate summary copied.');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+<span>Copy Brief to Clipboard</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Tab 2: Interview Questions Pane -->
+<div class="prep-panel hidden pt-space-md" id="prep-panel-questions">
+<div class="flex flex-col gap-space-lg">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg font-semibold text-on-surface">6 Targeted Questions (Grounded in CV claims)</span>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span>Regenerate</span>
+</button>
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors" onclick="alert('All 6 questions copied to clipboard!');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+<span>Copy all</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Group 1: Strengths to explore -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center gap-space-xs text-primary font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined">stars</span>
+<h3>Strengths to Explore</h3>
+</div>
+<!-- Question 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-primary uppercase">Trigger: Real-time Ingestion (Page 1)</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 1');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                1. "You designed streaming pipelines handling 2M events/sec. What ingestion framework was utilized, and how did you guarantee exactly-once processing semantics under consumer group failures?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Evaluates: Distributed fault tolerance, Kafka/Flink architectural depth.</span>
+</div>
+<!-- Question 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-primary uppercase">Trigger: Airflow Migration (Page 2)</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 2');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                2. "When orchestrating 40+ migrated jobs in Airflow, how did you design DAG modularity and handle cross-DAG dependencies without deadlocking celery executors?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Evaluates: Orchestration design patterns and production concurrency.</span>
+</div>
+<!-- Question 3 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-primary uppercase">Trigger: Query Optimization (Page 2)</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 3');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                3. "Can you walk us through a specific PostgreSQL query or BigQuery slot bottleneck where partition pruning or window functions reduced scan latency?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Evaluates: Cost-efficiency and relational query execution planner literacy.</span>
+</div>
+</div>
+<!-- Group 2: Gaps / Nuance to verify -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center gap-space-xs text-secondary font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined">rule</span>
+<h3>Gaps & Nuance to Verify</h3>
+</div>
+<!-- Question 4 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-secondary uppercase">Trigger: Unreferenced Lakehouse</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 4');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                4. "While your CV details Athena and S3 data lakes, have you implemented table format specifications such as Apache Iceberg or Delta Lake for ACID mutations?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Checks: Modern lakehouse architectural readiness.</span>
+</div>
+<!-- Question 5 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-secondary uppercase">Trigger: Terraform Cloud Infrastructure</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 5');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                5. "Did you manage remote Terraform state backends and CI/CD plan checks independently, or collaborate with a dedicated DevOps/Platform team?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Checks: Cloud self-sufficiency vs platform dependencies.</span>
+</div>
+<!-- Question 6 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative group">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm font-semibold text-secondary uppercase">Trigger: SLA Monitoring</span>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); alert('Copied Question 6');" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium">
+                6. "What incident response playbooks did you establish when downstream consumer pipelines violated SLA freshness requirements?"
+              </p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Checks: Operational maturity and on-call accountability.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab 3: Email Draft Pane -->
+<div class="prep-panel hidden pt-space-md" id="prep-panel-email">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Controls Column (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-md text-label-md text-on-surface font-semibold">Template Type</label>
+<div class="grid grid-cols-2 gap-space-xs bg-surface-container-low p-1 rounded-lg">
+<button class="px-space-sm py-1.5 rounded-md text-label-md font-label-md bg-surface-container-lowest text-on-surface shadow-sm font-semibold" id="email-btn-invitation" onclick="selectEmailType('invitation')" type="button">Interview Invite</button>
+<button class="px-space-sm py-1.5 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface" id="email-btn-assessment" onclick="selectEmailType('assessment')" type="button">Assessment</button>
+</div>
+</div>
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-md text-label-md text-on-surface font-semibold">Date & Time Offer</label>
+<input class="w-full px-space-md py-space-xs rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-highest" id="email-date-input" oninput="updateEmailPreview()" type="text" value="Thursday, Oct 24 at 2:00 PM EST"/>
+</div>
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-md text-label-md text-on-surface font-semibold">Meeting Video Link</label>
+<input class="w-full px-space-md py-space-xs rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-highest" id="email-link-input" oninput="updateEmailPreview()" type="text" value="https://meet.google.com/rec-engi-maya"/>
+</div>
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-md text-label-md text-on-surface font-semibold">Key Discussion Topic Focus</label>
+<input class="w-full px-space-md py-space-xs rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-highest" id="email-focus-input" oninput="updateEmailPreview()" type="text" value="Data pipeline scaling & Airflow DAG architecture"/>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-low flex items-start gap-space-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">policy</span>
+<span class="font-body-sm text-body-sm">
+<strong class="font-semibold text-on-surface">Compliance notice:</strong> This environment generates drafts for copy/export only. Direct sending must take place through your verified enterprise ATS or email client.
+            </span>
+</div>
+</div>
+<!-- Editable Area Column (8 Cols) -->
+<div class="lg:col-span-8 flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg font-semibold text-on-surface">Subject: Invitation to Technical Screen - Senior Data Engineer</span>
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md transition-colors" onclick="downloadEmailTxt()" type="button">
+<span class="material-symbols-outlined text-[16px]">download</span>
+<span>Download .txt</span>
+</button>
+<button class="flex items-center gap-1 px-space-md py-1 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-colors shadow-sm" onclick="copyEmailDraft()" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+<span>Copy Draft</span>
+</button>
+</div>
+</div>
+<textarea class="w-full p-space-md rounded-xl bg-surface-container-low text-on-surface font-body-md text-body-md leading-relaxed resize-y focus:outline-none focus:bg-surface-container-highest font-mono selection:bg-primary-fixed" id="email-body-textarea" rows="12">Hi Maya,
+
+Thank you for your interest in the Senior Data Engineer role at our team!
+
+Our engineering hiring panel reviewed your background and was especially impressed with your real-time streaming work (ingesting 2M events/sec) and your experience orchestrating Airflow DAG migrations at scale.
+
+We would love to invite you for a 45-minute technical screen focusing on Data pipeline scaling & Airflow DAG architecture.
+
+Proposed Interview Slot:
+- Date: Thursday, Oct 24 at 2:00 PM EST
+- Video Link: https://meet.google.com/rec-engi-maya
+
+If this time does not fit your schedule, please feel free to suggest an alternative time window that works best for you.
+
+Looking forward to speaking with you!
+
+Best regards,
+Talent Acquisition Team</textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- Persistent Assistant Drawer (Collapsible & Fixed right overlay) -->
+<div class="fixed top-16 right-0 bottom-0 w-[420px] max-w-[90vw] bg-surface-container-lowest shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col translate-x-0" id="ai-assistant-drawer">
+<!-- Drawer Header -->
+<div class="p-space-md bg-surface-container flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface leading-none">Recruiter Assistant</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Evidence Copilot</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<div class="flex items-center gap-1 px-space-xs py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+</span>
+<span>AI connected</span>
+</div>
+<button class="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors" onclick="toggleAssistant(false)" title="Close drawer" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+<!-- Active Context Chips -->
+<div class="flex flex-wrap items-center gap-space-xs pt-1">
+<span class="px-space-xs py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">work</span> Senior Data Engineer
+        </span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">person</span> Maya Shah
+        </span>
+</div>
+</div>
+<!-- Quick Prompt Suggestions Bar -->
+<div class="p-space-sm bg-surface-container-low flex items-center gap-space-xs overflow-x-auto whitespace-nowrap">
+<button class="px-space-sm py-1 rounded-full bg-surface-container-lowest text-on-surface text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors shadow-sm shrink-0" onclick="sendPrompt('Why is Maya ranked #1?')" type="button">Why is Maya ranked #1?</button>
+<button class="px-space-sm py-1 rounded-full bg-surface-container-lowest text-on-surface text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors shadow-sm shrink-0" onclick="sendPrompt('What should I ask about Airflow?')" type="button">What to ask on Airflow?</button>
+<button class="px-space-sm py-1 rounded-full bg-surface-container-lowest text-on-surface text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors shadow-sm shrink-0" onclick="sendPrompt('Compare Maya vs Arjun')" type="button">Compare vs Arjun</button>
+</div>
+<!-- Active Conversation Thread -->
+<div class="flex-1 p-space-md overflow-y-auto flex flex-col gap-space-md" id="drawer-chat-messages">
+<!-- User message -->
+<div class="flex flex-col items-end">
+<div class="max-w-[85%] p-space-sm rounded-xl rounded-tr-none bg-primary text-on-primary font-body-md text-body-md shadow-sm">
+          Maya mentions Airflow. What should I ask to check whether she owned a production pipeline?
+        </div>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1 mr-1">Just now</span>
+</div>
+<!-- AI Assistant Response with Citations & Probes -->
+<div class="flex flex-col items-start gap-space-xs">
+<div class="max-w-[92%] p-space-md rounded-xl rounded-tl-none bg-surface-container-low text-on-surface flex flex-col gap-space-sm shadow-sm">
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+<span class="font-label-sm text-label-sm font-semibold uppercase tracking-wider">CV Evidence Record</span>
+</div>
+<p class="font-body-md text-body-md leading-relaxed">
+            Maya's CV states she <span class="font-semibold text-primary">“Led migration of 40+ cron jobs to Airflow DAGs at DataCorp”</span>.
+          </p>
+<div class="p-space-xs rounded bg-surface-container flex items-center justify-between text-label-sm font-label-sm">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">link</span> Page 2, Experience
+            </span>
+<span class="text-primary font-semibold cursor-pointer hover:underline">View inline citation</span>
+</div>
+<div class="h-[1px] w-full bg-surface-container-highest my-0.5"></div>
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">psychology_alt</span>
+<span class="font-label-sm text-label-sm font-semibold uppercase tracking-wider">Verification Questions to Probe</span>
+</div>
+<ol class="flex flex-col gap-space-xs font-body-sm text-body-sm list-decimal pl-4">
+<li>
+<strong>Architecture vs Logic:</strong> “Did you architect the overall DAG retry policies, backfills, and alerting, or primarily write the Python operator tasks?”
+            </li>
+<li>
+<strong>Concurrency Management:</strong> “How did you configure worker concurrency and scheduler backpressure during peak migration traffic?”
+            </li>
+</ol>
+<!-- General Recruiter Advice badge -->
+<div class="mt-1 p-space-xs rounded-lg bg-surface-container flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-tertiary">lightbulb</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">
+<strong class="font-medium text-on-surface">Recruiter Tip:</strong> If she authored custom Operators or Sensors, that confirms senior production ownership.
+            </span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">AI Copilot • Synthesized with Engine v2.4</span>
+</div>
+</div>
+<!-- Input Bar -->
+<div class="p-space-md bg-surface-container flex flex-col gap-space-xs">
+<form class="relative flex items-center" onsubmit="handleChatSubmit(event)">
+<input class="w-full pl-3 pr-10 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary shadow-inner" id="drawer-input" placeholder="Ask about candidates, this job, interviews, or outreach…" type="text"/>
+<button class="absolute right-1.5 p-1.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary transition-colors" type="submit">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</form>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-1">
+<span>Shift + Enter for multiline</span>
+<span>⌘J to toggle</span>
+</div>
+</div>
+</div>
+<!-- Persistent Floating Trigger Button (when drawer is closed) -->
+<button class="hidden fixed bottom-6 right-6 z-40 px-space-md py-space-sm rounded-full bg-primary hover:bg-primary-container text-on-primary shadow-xl items-center gap-space-xs transition-all" id="floating-open-assistant-btn" onclick="toggleAssistant(true)" type="button">
+<span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+<span class="font-label-lg text-label-lg font-semibold">Ask Assistant</span>
+</button>
+</div>
+<script>
+  // Tab Switching
+  function switchPrepTab(tabName) {
+    document.querySelectorAll('.prep-tab-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+      btn.classList.add('text-on-surface-variant', 'font-medium');
+    });
+
+    const activeBtn = document.getElementById('tab-btn-' + tabName);
+    if (activeBtn) {
+      activeBtn.classList.add('active', 'bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+      activeBtn.classList.remove('text-on-surface-variant', 'font-medium');
+    }
+
+    document.querySelectorAll('.prep-panel').forEach(panel => {
+      panel.classList.add('hidden');
+    });
+
+    const activePanel = document.getElementById('prep-panel-' + tabName);
+    if (activePanel) {
+      activePanel.classList.remove('hidden');
+    }
+  }
+
+  // Filter skills table
+  function filterSkills(filter) {
+    document.querySelectorAll('.skill-filter-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+      btn.classList.add('text-on-surface-variant');
+    });
+
+    event.currentTarget.classList.add('active', 'bg-surface-container-lowest', 'text-on-surface', 'shadow-sm', 'font-semibold');
+    event.currentTarget.classList.remove('text-on-surface-variant');
+
+    const rows = document.querySelectorAll('.skill-row');
+    rows.forEach(row => {
+      const cat = row.getAttribute('data-category');
+      if (filter === 'all') {
+        row.classList.remove('hidden');
+      } else if (cat.includes(filter)) {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+  }
+
+  // Drawer Toggle
+  function toggleAssistant(show) {
+    const drawer = document.getElementById('ai-assistant-drawer');
+    const openBtn = document.getElementById('floating-open-assistant-btn');
+    if (show) {
+      drawer.classList.remove('translate-x-full');
+      drawer.classList.add('translate-x-0');
+      openBtn.classList.add('hidden');
+      openBtn.classList.remove('flex');
+    } else {
+      drawer.classList.remove('translate-x-0');
+      drawer.classList.add('translate-x-full');
+      openBtn.classList.remove('hidden');
+      openBtn.classList.add('flex');
+    }
+  }
+
+  // Keyboard shortcut command+J
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+      e.preventDefault();
+      const drawer = document.getElementById('ai-assistant-drawer');
+      const isClosed = drawer.classList.contains('translate-x-full');
+      toggleAssistant(isClosed);
+    }
+  });
+
+  // Assistant Query handler
+  function sendPrompt(text) {
+    const chatContainer = document.getElementById('drawer-chat-messages');
+    
+    // Append User
+    const userDiv = document.createElement('div');
+    userDiv.className = 'flex flex-col items-end';
+    userDiv.innerHTML = `
+      <div class="max-w-[85%] p-space-sm rounded-xl rounded-tr-none bg-primary text-on-primary font-body-md text-body-md shadow-sm">
+        ${text}
+      </div>
+      <span class="font-label-sm text-label-sm text-on-surface-variant mt-1 mr-1">Just now</span>
+    `;
+    chatContainer.appendChild(userDiv);
+
+    // Append AI Response
+    setTimeout(() => {
+      const aiDiv = document.createElement('div');
+      aiDiv.className = 'flex flex-col items-start gap-space-xs';
+      aiDiv.innerHTML = `
+        <div class="max-w-[92%] p-space-md rounded-xl rounded-tl-none bg-surface-container-low text-on-surface flex flex-col gap-space-sm shadow-sm">
+          <div class="flex items-center gap-1.5 text-primary">
+            <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+            <span class="font-label-sm text-label-sm font-semibold uppercase tracking-wider">Copilot Response</span>
+          </div>
+          <p class="font-body-md text-body-md leading-relaxed">
+            Maya scores highest (91%) among applicants because 100% of required skills are grounded in documented source metrics (e.g. 2M events/sec Kafka/PySpark ingestion, 40+ DAG orchestration).
+          </p>
+        </div>
+      `;
+      chatContainer.appendChild(aiDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }, 400);
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  function handleChatSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('drawer-input');
+    const val = input.value.trim();
+    if (!val) return;
+    sendPrompt(val);
+    input.value = '';
+  }
+
+  function askQuestionAbout(skillTopic) {
+    toggleAssistant(true);
+    sendPrompt("What are the best technical probing questions for Maya on " + skillTopic + "?");
+  }
+
+  // Email draft helpers
+  function selectEmailType(type) {
+    const inviteBtn = document.getElementById('email-btn-invitation');
+    const assessBtn = document.getElementById('email-btn-assessment');
+    const textarea = document.getElementById('email-body-textarea');
+
+    if (type === 'invitation') {
+      inviteBtn.className = "px-space-sm py-1.5 rounded-md text-label-md font-label-md bg-surface-container-lowest text-on-surface shadow-sm font-semibold";
+      assessBtn.className = "px-space-sm py-1.5 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface";
+      updateEmailPreview();
+    } else {
+      assessBtn.className = "px-space-sm py-1.5 rounded-md text-label-md font-label-md bg-surface-container-lowest text-on-surface shadow-sm font-semibold";
+      inviteBtn.className = "px-space-sm py-1.5 rounded-md text-label-md font-label-md text-on-surface-variant hover:text-on-surface";
+      textarea.value = `Hi Maya,\n\nFollowing up on your Senior Data Engineer application. We'd love to share the technical assessment instructions:\n\n1. Objective: Implement a resilient PySpark DAG streaming pipeline.\n2. Assessment Portal: https://eval.recruiter-ai.com/session/maya-shah\n3. Completion Window: 72 hours\n\nPlease let us know if you run into any permission issues!\n\nBest,\nTalent Acquisition Team`;
+    }
+  }
+
+  function updateEmailPreview() {
+    const date = document.getElementById('email-date-input').value;
+    const link = document.getElementById('email-link-input').value;
+    const focus = document.getElementById('email-focus-input').value;
+    const textarea = document.getElementById('email-body-textarea');
+
+    textarea.value = `Hi Maya,\n\nThank you for your interest in the Senior Data Engineer role at our team!\n\nOur engineering hiring panel reviewed your background and was especially impressed with your real-time streaming work (ingesting 2M events/sec) and your experience orchestrating Airflow DAG migrations at scale.\n\nWe would love to invite you for a 45-minute technical screen focusing on ${focus}.\n\nProposed Interview Slot:\n- Date: ${date}\n- Video Link: ${link}\n\nIf this time does not fit your schedule, please feel free to suggest an alternative time window that works best for you.\n\nLooking forward to speaking with you!\n\nBest regards,\nTalent Acquisition Team`;
+  }
+
+  function copyEmailDraft() {
+    const text = document.getElementById('email-body-textarea').value;
+    navigator.clipboard.writeText(text);
+    alert('Email draft copied to clipboard!');
+  }
+
+  function downloadEmailTxt() {
+    const text = document.getElementById('email-body-textarea').value;
+    const element = document.createElement('a');
+    const file = new Blob([text], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = "Maya_Shah_Interview_Invite.txt";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  }
+</script></div></main></div><button aria-label="Ask AI Assistant" class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary hover:bg-primary-container text-on-primary shadow-xl flex items-center justify-center transition-all group" type="button"><span class="material-symbols-outlined text-[26px]">auto_awesome</span><span class="absolute top-1 right-1 flex h-3.5 w-3.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary-fixed-dim opacity-75"></span><span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-tertiary-fixed"></span></span></button></body></html>
