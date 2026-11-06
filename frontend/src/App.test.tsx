@@ -22,6 +22,35 @@ beforeEach(() => {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+test('choosing a JD file saves it before comparison', async () => {
+  let current = { jds: [] as typeof sampleWorkspace.jds, candidates: sampleWorkspace.candidates, selected_jd_id: '', recruitment: [], drafts: [] }
+  const upload = vi.fn()
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'upload@example.test' })
+    if (url.endsWith('/api/jds/upload')) { upload(); current = { ...current, jds: sampleWorkspace.jds, selected_jd_id: 'data-engineer' }; return Response.json(sampleWorkspace.jds[0]) }
+    if (url.endsWith('/api/workspace')) return Response.json(current)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: current.jds[0] || null, results: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'upload@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Compare candidates' }))
+  expect(screen.getByText('Add a job description to compare your saved CVs.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Manage documents' }))
+  fireEvent.click(screen.getByRole('button', { name: /^Upload file$/ }))
+  fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(['Required: Python'], 'role.pdf', { type: 'application/pdf' })] } })
+  await waitFor(() => expect(upload).toHaveBeenCalledTimes(1))
+  await screen.findByRole('heading', { name: 'Job descriptions 1' })
+})
+
 test('login is minimal and create-account navigation works', async () => {
   const { default: App } = await import('./App')
   render(<App />)
@@ -154,7 +183,6 @@ test('oversized upload is stopped before leaving the browser', async () => {
   const file = new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'large.txt', { type: 'text/plain' })
   const input = document.querySelector('.document-card input[type="file"]') as HTMLInputElement
   fireEvent.change(input, { target: { files: [file] } })
-  fireEvent.click(screen.getByRole('button', { name: 'Add job description' }))
   expect(await screen.findByText('File exceeds the 4 MB limit.')).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Job descriptions 0' })).toBeTruthy()
 })

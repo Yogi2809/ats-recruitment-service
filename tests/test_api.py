@@ -180,3 +180,19 @@ def test_recruitment_stage_is_recorded_per_candidate_and_grounded_in_chat(tmp_pa
     with make_client(tmp_path) as bob:
         register(bob, "stage-bob@example.test")
         assert bob.patch(f"/api/candidates/{candidate['id']}/recruitment", json={"stage": "Offer"}).status_code == 404
+
+
+def test_duplicate_email_explains_login_instead_of_creating_account(tmp_path):
+    with make_client(tmp_path) as client:
+        register(client, "already@example.test")
+        response = client.post("/api/auth/register", json={"email": " ALREADY@example.test ", "password": "another-long-password"})
+        assert response.status_code == 409
+        assert response.json()["detail"] == "This email is already registered. Log in instead."
+
+
+def test_qa_job_extracts_testing_skills_for_comparison(tmp_path):
+    with make_client(tmp_path) as client:
+        register(client, "qa-role@example.test")
+        response = client.post("/api/jds/paste", json={"title": "QA Engineer", "text": "Required: manual testing, test cases, Selenium, API testing, and Jira."})
+        assert response.status_code == 201
+        assert {"Manual Testing", "Test Cases", "Selenium", "API Testing", "Jira"}.issubset(set(response.json()["required"]))

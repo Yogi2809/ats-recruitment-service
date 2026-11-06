@@ -25,8 +25,8 @@ python tests/live_smoke.py https://roletrace.vercel.app
 
 | Gate | Result | What it covers |
 | --- | --- | --- |
-| Backend/API | 30 tests passed | Auth, empty workspace, upload/parse, ranking, grounding, stage CRUD, tenant checks, static serving, edge inputs. |
-| React interface | 8 tests passed | Registration, empty screens, key actions, candidate chat context, status form, interactive flows. |
+| Backend/API | 32 tests passed | Auth, empty workspace, upload/parse, ranking, grounding, stage CRUD, tenant checks, static serving, edge inputs. |
+| React interface | 9 tests passed | Registration, empty screens, file selection upload, key actions, candidate chat context, status form, interactive flows. |
 | Production build | Passed | TypeScript compilation and Vite asset build. |
 | Deployed HTTP smoke | 12 check groups passed | Real public URL, serverless API, and persistent Neon data. |
 
@@ -71,6 +71,7 @@ The login form and main controls expose labels, error messages, a visible keyboa
 - **Duplicate chat action:** candidate review uses the floating chat launcher. The candidate remains selected when chat opens.
 - **Optional LLM grounding:** an uncited model answer to a candidate-skill query falls back to the computed, cited answer.
 - **Refresh after a release:** an already-open test tab could reuse an older HTML file whose JavaScript bundle had been removed, leaving a blank page. HTML now returns `Cache-Control: no-store`, and several prior versioned assets are retained in the deployed package so an older page can still load during the transition.
+- **File chosen but JD not saved:** the PDF itself extracted correctly, but the former upload screen required an additional Add click after file selection. The user's CV was stored while the JD count stayed at zero, so comparison had no active role. File selection now starts upload automatically, and the empty comparison state names the missing JD. Duplicate-email registration now shows a direct login prompt.
 
 ## Remaining risks and test limits
 

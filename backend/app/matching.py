@@ -19,6 +19,12 @@ ALIASES: dict[str, list[str]] = {
     "Docker": ["docker", "containers"],
     "Kubernetes": ["kubernetes", "k8s"],
     "Machine Learning": ["machine learning", "ml models"],
+    "Manual Testing": ["manual testing", "manual qa"],
+    "Test Cases": ["test cases", "test case", "test scenarios"],
+    "Selenium": ["selenium", "selenium webdriver"],
+    "API Testing": ["api testing", "api tests", "rest api testing"],
+    "Jira": ["jira"],
+    "Test Automation": ["test automation", "automation testing", "automated testing"],
 }
 
 

@@ -165,7 +165,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if user is None:
-            raise HTTPException(status_code=409, detail="Account could not be created. Try logging in.")
+            raise HTTPException(status_code=409, detail="This email is already registered. Log in instead.")
         set_cookie(response, store, user, body.keep_signed_in)
         return {"id": user.id, "email": user.email}
 

@@ -2,7 +2,7 @@
 
 **Live demo:** [roletrace.vercel.app](https://roletrace.vercel.app) — create an account, then add your own synthetic test documents. New accounts start with an empty workspace. No API key is required.
 
-A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; records candidate recruitment stages; and answers questions through a floating recruiter chat.
+A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; records candidate recruitment stages; and answers questions through a floating recruiter chat. Choosing a file in the upload view saves it automatically; pasted text uses the Add button.
 
 Each document can contain up to 4 MB of readable text or file data. The deployed limit leaves room beneath [Vercel's 4.5 MB request-body cap](https://vercel.com/docs/functions/limitations). The database keeps the extracted text; ordinary API responses return compact excerpts so comparisons remain usable as documents accumulate.
 
