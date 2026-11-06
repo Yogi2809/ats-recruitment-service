@@ -15,14 +15,14 @@ The app will include at least two synthetic JDs, six synthetic CVs with delibera
 
 ## Architecture and boundaries
 
-One Streamlit app calls focused Python modules:
+One FastAPI service and React frontend call focused Python modules:
 
-1. **Document ingestion** extracts text and source locations (PDF page, DOCX paragraph, or TXT line), validates file type and size, and creates normalized evidence chunks. It treats uploaded text as data, never as instructions.
-2. **Recruitment store** holds the active session's JDs, candidates, and synthetic recruitment records in memory. Sample data loads on first launch. Uploaded documents belong to the current session.
+1. **Document ingestion** accepts either uploads or pasted text in separate JD and CV input controls. It extracts text and source locations (PDF page, DOCX paragraph, TXT line, or pasted-text line), validates file type and size, and creates normalized evidence chunks. It treats supplied text as data, never as instructions.
+2. **Recruitment store** holds each browser session's JDs, candidates, and synthetic recruitment records in server memory under an unguessable session identifier. Sample data loads on first launch. Uploaded documents belong to the current session, are not written to disk, and disappear after service restart or session expiry.
 3. **Matcher** identifies canonical skills from a documented alias catalog, records the exact supporting excerpt for each hit, and computes reproducible rankings. It does not infer that an unmentioned skill is absent in reality.
 4. **Retrieval and answer service** resolves candidate/JD names, retrieves relevant chunks and structured records, and creates an answer with source labels. With a configured Groq key, an LLM phrases the answer and handles varied recruiter questions. Without one, a limited rule-based answer service covers the included demo questions and gives a clear unsupported-question response.
 5. **Draft service** produces evidence-based summaries, role-specific interview questions, invitation emails, and assessment instructions. LLM wording is used when available; deterministic templates provide the fallback. Emails are displayed as editable drafts and never sent.
-6. **Streamlit UI** presents the workspace: dataset and upload controls, JD selection, ranking/explanations, candidate actions, and chat history.
+6. **React UI and FastAPI service** present the workspace and expose document, ranking, draft, and chat endpoints. FastAPI also serves the built frontend from the same public service. The UI follows `docs/stitch-ui-brief.md`, including light/dark themes, visual comparisons, and a floating chat drawer.
 
 No vector database or separate backend is needed for the small, session-local dataset. The modules expose plain Python functions so scoring and retrieval can be tested without the UI or API.
 
@@ -30,7 +30,7 @@ No vector database or separate backend is needed for the small, session-local da
 
 The selected JD is parsed into required and preferred skill lists, shown to the recruiter for review and correction. Skills are normalized through an alias table (for example, `Postgres` to `PostgreSQL`). Required-skill coverage contributes 70% of the displayed score, preferred-skill coverage 20%, and lexical JD/CV similarity 10%. Similarity uses word-level TF-IDF cosine similarity, calculated across the active JD and candidate documents. Empty skill lists redistribute their weight across the remaining nonempty components. Ties sort by candidate ID for stable results.
 
-The result card shows the score breakdown, matched required/preferred skills with supporting excerpts, and requirements for which the CV provides no evidence. The score means match to the supplied JD and CV text. It is not a probability of job success. Experience is summarized only when an explicit passage supports it; experience is not silently estimated from dates.
+The result card shows an **ATS-style JD alignment score** as a percentage, not a claim about any external ATS. Bands are Strong alignment (80–100), Possible alignment (60–79), and Limited evidence (0–59). The UI includes an overall donut, a side-by-side comparison of score components, JD terminology found/not found, and a table of matched requirements and requirements for which the CV provides no evidence, each linked to supporting excerpts. The score means match to the supplied JD and CV text. It is not a probability of job success. Experience is summarized only when an explicit passage supports it; experience is not silently estimated from dates.
 
 ## Chat and grounding
 
@@ -42,9 +42,9 @@ Out-of-domain requests receive a short redirect to recruitment tasks. Ranking an
 
 ## Interface and interaction
 
-The default screen opens with sample data loaded. The top of the workspace identifies the active JD and candidate count. A ranked table or cards show fit, skills, gaps, and evidence. Selecting a candidate reveals summary, interview questions, and draft email actions. Chat remains visible as the central interaction, with suggested prompts for first-time reviewers. Every generated text area can be copied; email drafts can be edited before copying.
+The default screen opens with sample data loaded. The workspace has separate JD and CV inputs, each with upload and paste tabs. The top identifies the active JD and candidate count. A ranked table or cards show fit, skills, gaps, and evidence. Selecting a candidate reveals comparison charts, a skills/evidence table, summary, interview questions, and draft email actions. A persistent bottom-right chat launcher opens a responsive chat drawer with suggested prompts. Every generated text area can be copied; email drafts can be edited before copying. The UI has a visible light/dark toggle and a responsive mobile layout. Full screens, transitions, visual tokens, and states are in `docs/stitch-ui-brief.md`.
 
-The UI marks synthetic sample data, explains that uploaded files are session-local, and warns users to avoid real candidate information in the public demo. The app does not request a reviewer's API key. The owner configures `GROQ_API_KEY` as a Streamlit secret and can set the model through configuration. The key never appears in UI or repository files.
+The UI marks synthetic sample data, explains that uploaded files are session-local, and warns users to avoid real candidate information in the public demo. The app does not request a reviewer's API key. The owner configures `GROQ_API_KEY` as a Render environment variable and can set the model through configuration. The key never appears in UI or repository files.
 
 ## Tests and acceptance criteria
 
@@ -54,5 +54,5 @@ The prototype is accepted when a reviewer can: (1) use sample data immediately; 
 
 ## Deployment
 
-Publish source and synthetic data to a public GitHub repository and deploy the Streamlit entry point on Streamlit Community Cloud. Configure the Groq key only in Streamlit secrets. The app must function without that secret for reviewers and local runs. Before submission, visit the deployed link to wake it, verify the demo flow, and include both app and repository links in the submission. Streamlit Community Cloud may hibernate after inactivity and Groq free-tier availability is quota limited; the README supplies local-run instructions and the no-key fallback.
+Publish source and synthetic data to a public GitHub repository and deploy one FastAPI web service on Render, serving both the API and compiled React assets from an `onrender.com` URL. Configure the Groq key only as a Render environment variable. The app must function without that secret for reviewers and local runs. Before submission, visit the deployed link to wake it, verify the demo flow, and include both app and repository links in the submission. Render's free service spins down after idle time and has ephemeral storage, so uploads are session-local and sample data ships in the repository. Groq free-tier availability is quota limited; the README supplies local-run instructions and the no-key fallback.
 
