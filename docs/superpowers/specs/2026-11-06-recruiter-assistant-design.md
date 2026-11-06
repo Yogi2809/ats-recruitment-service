@@ -1,11 +1,11 @@
 # Recruiter Assistant: Design Specification
 
 Date: 6 November 2026
-Status: proposed for user review
+Status: approved with subsequent user refinements on 6 November 2026
 
 ## Goal and demo story
 
-Build a shareable Python prototype for a recruiter to inspect synthetic CVs and job descriptions, compare candidates, ask open-ended recruitment questions, and draft interview materials. A reviewer can open the app and complete the full demo without an account or API key. The owner configures one optional server-side free-tier LLM key for flexible conversation. All five assignment requirements must remain usable if that key is absent or quota is exhausted.
+Build a shareable Python prototype for a recruiter to inspect synthetic CVs and job descriptions, compare candidates, ask open-ended recruitment questions, and draft interview materials. A reviewer creates an email/password account and signs in to use the app; no reviewer API key is needed. The owner configures one optional server-side free-tier LLM key for flexible conversation. All five assignment requirements must remain usable if that key is absent or quota is exhausted.
 
 Primary demonstration: select a sample JD, inspect a ranked shortlist with supporting excerpts, ask why two candidates differ, generate a summary and interview questions, then draft an invitation or assessment email. The outputs are assistance for a human recruiter, not an automated hiring decision.
 
@@ -18,7 +18,7 @@ The app will include at least two synthetic JDs, six synthetic CVs with delibera
 One FastAPI service and React frontend call focused Python modules:
 
 1. **Document ingestion** accepts either uploads or pasted text in separate JD and CV input controls. It extracts text and source locations (PDF page, DOCX paragraph, TXT line, or pasted-text line), validates file type and size, and creates normalized evidence chunks. It treats supplied text as data, never as instructions.
-2. **Recruitment store** holds each browser session's JDs, candidates, and synthetic recruitment records in server memory under an unguessable session identifier. Sample data loads on first launch. Uploaded documents belong to the current session, are not written to disk, and disappear after service restart or session expiry.
+2. **Authentication and recruitment store** persists registered email accounts and password hashes in a database, supports login, optional keep-signed-in duration, and logout, and protects application routes. Each signed-in user's JDs, candidates, and synthetic recruitment records are isolated in server memory. Sample data loads on first launch. Uploaded documents are not written to disk and disappear after service restart or session expiry.
 3. **Matcher** identifies canonical skills from a documented alias catalog, records the exact supporting excerpt for each hit, and computes reproducible rankings. It does not infer that an unmentioned skill is absent in reality.
 4. **Retrieval and answer service** resolves candidate/JD names, retrieves relevant chunks and structured records, and creates an answer with source labels. With a configured Groq key, an LLM phrases the answer and handles varied recruiter questions. Without one, a limited rule-based answer service covers the included demo questions and gives a clear unsupported-question response.
 5. **Draft service** produces evidence-based summaries, role-specific interview questions, invitation emails, and assessment instructions. LLM wording is used when available; deterministic templates provide the fallback. Emails are displayed as editable drafts and never sent.
@@ -42,7 +42,7 @@ Out-of-domain requests receive a short redirect to recruitment tasks. Ranking an
 
 ## Interface and interaction
 
-The default screen opens with sample data loaded. The workspace has separate JD and CV inputs, each with upload and paste tabs. The top identifies the active JD and candidate count. A ranked table or cards show fit, skills, gaps, and evidence. Selecting a candidate reveals comparison charts, a skills/evidence table, summary, interview questions, and draft email actions. A persistent bottom-right chat launcher opens a responsive chat drawer with suggested prompts. Every generated text area can be copied; email drafts can be edited before copying. The UI has a visible light/dark toggle and a responsive mobile layout. Full screens, transitions, visual tokens, and states are in `docs/stitch-ui-brief.md`.
+The product is named **RoleTrace**. The default post-login screen has sample data loaded. The workspace has separate JD and CV inputs, each with upload and paste tabs. The top identifies the active JD and candidate count. A ranked table or cards show fit, skills, gaps, and evidence. Selecting a candidate reveals comparison charts, a skills/evidence table, summary, interview questions, and draft email actions. A single persistent bottom-right chat launcher opens a responsive chat drawer; there are no duplicate Ask Assistant buttons. Every generated text area can be copied; email drafts can be edited before copying. The login and account-creation pages are minimal forms. The UI uses the Paper & Ember light/dark palette in `docs/stitch-reference/roletrace-DESIGN.md`, plain and concise copy, and a responsive mobile layout. The implementation is an original design informed by the user's requirements, not a copy of the Stitch screens.
 
 The UI marks synthetic sample data, explains that uploaded files are session-local, and warns users to avoid real candidate information in the public demo. Relevant excerpts may be transmitted to Groq when AI chat or drafting is used; the UI says so. The app does not request a reviewer's API key. The owner configures `GROQ_API_KEY` as a Render environment variable and can set the model through configuration. The key never appears in UI or repository files. The extracted Stitch design in `docs/stitch-reference/` is a visual reference; unsupported claims and static values identified in its README are not copied into the working app.
 
@@ -54,5 +54,5 @@ The prototype is accepted when a reviewer can: (1) use sample data immediately; 
 
 ## Deployment
 
-Publish source and synthetic data to a public GitHub repository and deploy one FastAPI web service on Render, serving both the API and compiled React assets from an `onrender.com` URL. Configure the Groq key only as a Render environment variable. The app must function without that secret for reviewers and local runs. Before submission, visit the deployed link to wake it, verify the demo flow, and include both app and repository links in the submission. Render's free service spins down after idle time and has ephemeral storage, so uploads are session-local and sample data ships in the repository. Groq free-tier availability is quota limited; the README supplies local-run instructions and the no-key fallback.
+Publish source and synthetic data to a public GitHub repository and deploy one FastAPI web service on Render, serving both the API and compiled React assets from an `onrender.com` URL. Configure the Groq key only as a Render environment variable. Use local SQLite for development and a persistent managed Postgres database in deployment so user accounts survive web-service restarts; uploaded documents remain session-local. The app must function without the Groq secret for reviewers and local runs. Before submission, visit the deployed link to wake it, verify the demo flow, and include both app and repository links in the submission. Render's free service spins down after idle time and has ephemeral storage; Groq free-tier availability is quota limited. The README supplies local-run instructions and the no-key fallback.
 
