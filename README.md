@@ -8,6 +8,8 @@ Each document can contain up to 4 MB of readable text or file data. The deployed
 
 The design uses a warm Paper & Ember palette in light and dark modes. The UI is responsive and requires an email/password account. All included people and recruitment records are synthetic.
 
+For the interview walkthrough, see the [high-level design](docs/HLD.md), [complete working specification](docs/WORKING_SPEC.md), and [QA report](docs/QA_REPORT.md).
+
 ## Quick start
 
 Requires Python 3.12+ and Node.js 22+.

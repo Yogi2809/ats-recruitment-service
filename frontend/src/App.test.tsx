@@ -201,7 +201,9 @@ test('asking from a candidate review selects that candidate in chat', async () =
   fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
   fireEvent.click(await screen.findByRole('button', { name: /01 MS Maya Shah/ }))
-  fireEvent.click(await screen.findByRole('button', { name: /Ask about candidate/ }))
+  await screen.findByRole('heading', { name: 'Maya Shah' })
+  expect(screen.queryByRole('button', { name: /Ask about candidate/ })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Open recruiter assistant' }))
   expect((screen.getByRole('combobox', { name: 'Discussing' }) as HTMLSelectElement).value).toBe('maya')
 })
 

@@ -152,9 +152,9 @@ def answer(question: str, workspace: Workspace, groq_client=None) -> dict:
             response.raise_for_status()
             generated = response.json()["choices"][0]["message"]["content"]
         cited_ids = set(re.findall(r"\[([^\]]+)\]", generated))
-        if candidate and cited_ids and not cited_ids.issubset(evidence):
+        if cited_ids and not cited_ids.issubset(evidence):
             return fallback
-        if candidate and not cited_ids and not generated.lower().startswith("general advice"):
+        if not cited_ids and not generated.lower().startswith("general advice"):
             return fallback
         return {"text": generated, "citations": [_citation(evidence[id]) for id in cited_ids if id in evidence]}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):

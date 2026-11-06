@@ -17,6 +17,19 @@ def test_unknown_candidate_fact_is_not_invented():
     assert "not established" in result["text"].lower()
 
 
+def test_optional_model_cannot_replace_uncited_skill_answer():
+    from backend.app.assistant import answer
+    from backend.app.sample_data import sample_workspace
+
+    result = answer(
+        "Who has Airflow?",
+        sample_workspace(),
+        groq_client=lambda _system, _context, _question: "All candidates have Airflow and are certified.",
+    )
+    assert "certified" not in result["text"].lower()
+    assert result["citations"]
+
+
 def test_candidate_answer_with_no_required_gaps_says_so_clearly():
     from backend.app.assistant import answer
     from backend.app.sample_data import sample_workspace
