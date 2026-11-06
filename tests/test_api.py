@@ -1,4 +1,6 @@
 from fastapi.testclient import TestClient
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 
 def make_client(tmp_path):
@@ -57,6 +59,24 @@ def test_pasted_jd_separates_required_and_preferred_skills_on_one_line(tmp_path)
         assert added.status_code == 201
         assert added.json()["required"] == ["Python", "SQL", "Data Pipelines"]
         assert added.json()["preferred"] == ["AWS"]
+
+
+def test_first_workspace_requests_can_arrive_together(tmp_path, monkeypatch):
+    from backend.app import main
+
+    barrier = Barrier(2)
+    original = main.sample_workspace
+
+    def concurrent_sample():
+        barrier.wait(timeout=5)
+        return original()
+
+    monkeypatch.setattr(main, "sample_workspace", concurrent_sample)
+    with make_client(tmp_path) as client:
+        register(client, "first-login@example.test")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(client.get, ["/api/workspace", "/api/compare"]))
+        assert [response.status_code for response in results] == [200, 200]
 
 
 def test_chat_and_draft_work_without_api_key(tmp_path, monkeypatch):

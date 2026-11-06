@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, Up
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from .auth import AuthStore, User, WorkspaceRecord, create_auth_store
 from .assistant import answer, generate_draft, generate_questions, generate_summary
@@ -76,7 +77,15 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
                 return workspace_from_dict(record.payload)
             current = sample_workspace()
             session.add(WorkspaceRecord(user_id=user.id, payload=asdict(current)))
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                # Another first-page request created this user's workspace.
+                existing = session.get(WorkspaceRecord, user.id)
+                if existing is None:
+                    raise
+                return workspace_from_dict(existing.payload)
             return current
 
     def save_workspace(user: User, current: Workspace) -> None:
