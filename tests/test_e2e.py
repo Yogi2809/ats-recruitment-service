@@ -98,7 +98,7 @@ def test_document_upload_formats_and_invalid_files(tmp_path):
         assert client.post("/api/candidates/upload", files={"file": ("Second.txt", b"Built Python services")}).status_code == 201
         assert client.post("/api/candidates/upload", files={"file": ("bad.png", b"image")}).status_code == 422
         assert client.post("/api/candidates/upload", files={"file": ("empty.txt", b"  ")}).status_code == 422
-        assert client.post("/api/candidates/upload", files={"file": ("large.txt", b"x" * (5 * 1024 * 1024 + 1))}).status_code == 422
+        assert client.post("/api/candidates/upload", files={"file": ("large.txt", b"x" * (4 * 1024 * 1024 + 1))}).status_code == 422
         assert len(client.get("/api/workspace").json()["candidates"]) == 2
 
 
@@ -114,3 +114,28 @@ def test_two_recruiters_can_write_at_the_same_time_without_mixing_data(tmp_path)
             assert second.result().status_code == 201
         assert [item["name"] for item in alice.get("/api/workspace").json()["candidates"]] == ["Alice Candidate"]
         assert [item["name"] for item in bob.get("/api/workspace").json()["candidates"]] == ["Bob Candidate"]
+
+
+def test_large_cv_keeps_recruiter_responses_compact_and_grounded(tmp_path):
+    with TestClient(app_for(tmp_path)) as client:
+        register(client, "large-cv@example.test")
+        jd = client.post("/api/jds/paste", json={"title": "Engineer", "text": "Required: Python, SQL, Airflow."})
+        assert jd.status_code == 201
+        large_text = "Background: " + "x" * 400_000 + " Built Python and SQL pipelines with Airflow."
+        candidate = client.post("/api/candidates/paste", json={"name": "Long CV", "text": large_text})
+        assert candidate.status_code == 201
+        assert len(candidate.content) < 100_000
+        workspace = client.get("/api/workspace")
+        assert workspace.status_code == 200
+        assert len(workspace.content) < 100_000
+        comparison = client.get("/api/compare")
+        assert comparison.status_code == 200
+        assert len(comparison.content) < 100_000
+        assert "Python" in comparison.json()["results"][0]["evidence"]["Python"]["text"]
+        analysis = client.get(f"/api/candidates/{candidate.json()['id']}/analysis")
+        assert analysis.status_code == 200
+        assert len(analysis.content) < 100_000
+        chat = client.post("/api/chat", json={"question": "Why is Long CV a match?", "candidate_id": candidate.json()["id"]})
+        assert chat.status_code == 200
+        assert len(chat.content) < 100_000
+        assert chat.json()["citations"]

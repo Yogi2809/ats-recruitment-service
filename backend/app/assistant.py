@@ -5,10 +5,11 @@ import httpx
 
 from .matching import ALIASES, find_skill, rank
 from .models import Candidate, JobDescription, MatchResult, Workspace
+from .serializers import evidence_excerpt
 
 
-def _citation(evidence):
-    return {"id": evidence.id, "source": evidence.source, "location": evidence.location, "text": evidence.text}
+def _citation(evidence, skill: str | None = None):
+    return evidence_excerpt(evidence, skill)
 
 
 def generate_summary(jd: JobDescription, candidate: Candidate, match: MatchResult) -> str:
@@ -79,7 +80,7 @@ def _fallback(question: str, workspace: Workspace) -> dict:
     candidate = _candidate(question, workspace)
     if candidate:
         match = next(item for item in matches if item.candidate_id == candidate.id)
-        citations = [_citation(e) for e in match.evidence.values()]
+        citations = [_citation(e, skill) for skill, e in match.evidence.items()]
         if any(word in query for word in ("certification", "certified", "degree", "salary", "availability")):
             return {"text": f"That is not established by {candidate.name}'s supplied CV or recruitment data.", "citations": []}
         if "status" in query or "stage" in query or "assessment assigned" in query:
@@ -97,7 +98,7 @@ def _fallback(question: str, workspace: Workspace) -> dict:
     for skill in ALIASES:
         if skill.lower() in query and ("who" in query or "which candidate" in query):
             found = [c for c in workspace.candidates if find_skill(skill, c.evidence)]
-            citations = [_citation(find_skill(skill, c.evidence)) for c in found]
+            citations = [_citation(find_skill(skill, c.evidence), skill) for c in found]
             names = ", ".join(c.name for c in found) or "No candidate"
             return {"text": f"{names} {'has' if len(found) == 1 else 'have'} CV evidence for {skill}.", "citations": citations}
     if "top" in query or "rank" in query:

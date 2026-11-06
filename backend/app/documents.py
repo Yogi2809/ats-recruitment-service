@@ -7,6 +7,8 @@ from pypdf import PdfReader
 
 from .models import Evidence
 
+MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
+
 
 def _chunks(source: str, values: list[tuple[str, str]]) -> list[Evidence]:
     prefix = uuid4().hex[:10]
@@ -21,6 +23,8 @@ def _chunks(source: str, values: list[tuple[str, str]]) -> list[Evidence]:
 
 
 def extract_paste(text: str) -> list[Evidence]:
+    if len(text.encode("utf-8")) > MAX_DOCUMENT_BYTES:
+        raise ValueError("Text exceeds the 4 MB limit.")
     return _chunks("Pasted text", [(f"line {i}", line) for i, line in enumerate(text.splitlines(), 1)])
 
 
@@ -28,8 +32,8 @@ def extract_document(filename: str, data: bytes) -> list[Evidence]:
     extension = Path(filename).suffix.lower()
     if extension not in {".pdf", ".docx", ".txt"}:
         raise ValueError("Use a PDF, DOCX, or TXT file.")
-    if len(data) > 5 * 1024 * 1024:
-        raise ValueError("File exceeds the 5 MB limit.")
+    if len(data) > MAX_DOCUMENT_BYTES:
+        raise ValueError("File exceeds the 4 MB limit.")
     try:
         if extension == ".txt":
             text = data.decode("utf-8-sig")

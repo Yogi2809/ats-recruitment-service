@@ -15,6 +15,7 @@ from .assistant import answer, generate_draft, generate_questions, generate_summ
 from .documents import extract_document, extract_paste
 from .matching import ALIASES, find_skill, rank
 from .models import Candidate, JobDescription, Workspace, workspace_from_dict
+from .serializers import candidate_response, jd_response, match_response
 
 
 class Credentials(BaseModel):
@@ -185,8 +186,8 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     def get_workspace(user: User = Depends(current_user)):
         current = workspace(user)
         return {
-            "jds": [asdict(item) for item in current.jds],
-            "candidates": [asdict(item) for item in current.candidates],
+            "jds": [jd_response(item) for item in current.jds],
+            "candidates": [candidate_response(item) for item in current.candidates],
             "selected_jd_id": current.selected_jd_id,
             "recruitment": current.recruitment,
             "drafts": current.drafts,
@@ -218,7 +219,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.jds.append(jd)
         current.selected_jd_id = jd.id
         save_workspace(user, current)
-        return asdict(jd)
+        return jd_response(jd, include_evidence=True)
 
     @app.post("/api/jds/upload", status_code=201)
     async def add_uploaded_jd(file: UploadFile = File(...), user: User = Depends(current_user)):
@@ -232,7 +233,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.jds.append(jd)
         current.selected_jd_id = jd.id
         save_workspace(user, current)
-        return asdict(jd)
+        return jd_response(jd, include_evidence=True)
 
     @app.post("/api/jds/{jd_id}/select")
     def select_jd(jd_id: str, user: User = Depends(current_user)):
@@ -250,7 +251,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd.required = [item.strip() for item in body.required if item.strip()]
         jd.preferred = [item.strip() for item in body.preferred if item.strip()]
         save_workspace(user, current)
-        return asdict(jd)
+        return jd_response(jd, include_evidence=True)
 
     @app.post("/api/candidates/paste", status_code=201)
     def add_pasted_candidate(body: PastedCandidate, user: User = Depends(current_user)):
@@ -262,7 +263,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         candidate = Candidate(uuid4().hex, body.name.strip() or "Unnamed candidate", evidence)
         current.candidates.append(candidate)
         save_workspace(user, current)
-        return asdict(candidate)
+        return candidate_response(candidate, include_evidence=True)
 
     @app.post("/api/candidates/upload", status_code=201)
     async def add_uploaded_candidate(file: UploadFile = File(...), user: User = Depends(current_user)):
@@ -274,7 +275,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         candidate = Candidate(uuid4().hex, Path(file.filename or "Candidate").stem.replace("_", " "), evidence)
         current.candidates.append(candidate)
         save_workspace(user, current)
-        return asdict(candidate)
+        return candidate_response(candidate, include_evidence=True)
 
     @app.delete("/api/candidates/{candidate_id}")
     def remove_candidate(candidate_id: str, user: User = Depends(current_user)):
@@ -288,7 +289,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     def compare(user: User = Depends(current_user)):
         current = workspace(user)
         jd = next((item for item in current.jds if item.id == current.selected_jd_id), None)
-        return {"jd": asdict(jd) if jd else None, "results": [asdict(item) for item in rank(jd, current.candidates)] if jd else []}
+        return {"jd": jd_response(jd) if jd else None, "results": [match_response(item) for item in rank(jd, current.candidates)] if jd else []}
 
     @app.get("/api/candidates/{candidate_id}/analysis")
     def candidate_analysis(candidate_id: str, user: User = Depends(current_user)):
@@ -296,7 +297,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         candidate = get_candidate(current, candidate_id)
         jd = active_jd(current)
         match = next(item for item in rank(jd, current.candidates) if item.candidate_id == candidate_id)
-        return {"candidate": asdict(candidate), "jd": asdict(jd), "match": asdict(match), "summary": generate_summary(jd, candidate, match), "questions": generate_questions(jd, candidate, match)}
+        return {"candidate": candidate_response(candidate, include_evidence=True), "jd": jd_response(jd, include_evidence=True), "match": match_response(match), "summary": generate_summary(jd, candidate, match), "questions": generate_questions(jd, candidate, match)}
 
     @app.post("/api/drafts/generate")
     def create_draft(body: DraftRequest, user: User = Depends(current_user)):

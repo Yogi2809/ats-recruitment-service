@@ -4,6 +4,8 @@
 
 A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; and answers questions through a floating recruiter chat.
 
+Each document can contain up to 4 MB of readable text or file data. The deployed limit leaves room beneath [Vercel's 4.5 MB request-body cap](https://vercel.com/docs/functions/limitations). The database keeps the extracted text; ordinary API responses return compact excerpts so comparisons remain usable as documents accumulate.
+
 The design uses a warm Paper & Ember palette in light and dark modes. The UI is responsive and requires an email/password account. All included people and recruitment records are synthetic.
 
 ## Quick start
@@ -45,7 +47,7 @@ The score is `70% × required coverage + 20% × preferred coverage + 10% × word
 
 ## Chat and optional LLM
 
-No API key is needed for the full demo. Without a key, chat answers supported candidate, skill, stage, ranking, and interview-question queries using deterministic code and cited sample data. It explicitly says when a fact, such as certification or availability, is not established.
+No API key is needed for the full demo. Without a key, chat answers supported candidate, skill, stage, ranking, and interview-question queries using deterministic code and cited workspace data. It explicitly says when a fact, such as certification or availability, is not established.
 
 For more flexible, natural recruiter questions, set `GROQ_API_KEY` as a **server-side environment variable**. The default model is `openai/gpt-oss-20b`, configurable with `GROQ_MODEL`. Create a key in the [Groq console](https://console.groq.com/keys) and check its current free-plan limits. Never place the key in frontend code, a public repository, or a screenshot. If Groq is unavailable or returns unusable citations, RoleTrace falls back to its no-key answer. CV excerpts are sent to Groq only when the key is configured; use synthetic data for this demo.
 
@@ -69,12 +71,15 @@ python -m pytest -q
 cd frontend && npm test && npm run build
 ```
 
+For a live deployment check, run `python tests/live_smoke.py https://roletrace.vercel.app`. This creates two synthetic test accounts and documents in the target database; it uses no real candidate information.
+
 ## Project map
 
 - `backend/app/main.py`: API routes, account protection, and compiled frontend serving
 - `backend/app/auth.py`: account database, Argon2 passwords, signed cookies
 - `backend/app/documents.py`: PDF/DOCX/TXT extraction with page/line locations
 - `backend/app/matching.py`: aliases, score, ranking, and evidence
+- `backend/app/serializers.py`: compact, relevant API evidence excerpts
 - `backend/app/assistant.py`: summaries, interview questions, drafts, and chat
 - `backend/app/sample_data.py`: synthetic demo data
 - `frontend/src/App.tsx`: screen flows and API interactions

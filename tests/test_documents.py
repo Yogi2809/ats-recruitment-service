@@ -48,3 +48,12 @@ def test_scan_and_unsupported_type_report_clear_errors():
         extract_document("scan.pdf", pdf_bytes.getvalue())
     with pytest.raises(ValueError, match="PDF, DOCX, or TXT"):
         extract_document("resume.png", b"not-a-document")
+
+
+def test_file_over_deployed_upload_limit_is_rejected():
+    from backend.app.documents import extract_document, extract_paste
+
+    with pytest.raises(ValueError, match="4 MB limit"):
+        extract_document("resume.txt", b"x" * (4 * 1024 * 1024 + 1))
+    with pytest.raises(ValueError, match="4 MB limit"):
+        extract_paste("x" * (4 * 1024 * 1024 + 1))
