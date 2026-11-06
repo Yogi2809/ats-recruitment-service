@@ -1,5 +1,7 @@
 # RoleTrace
 
+**Live demo:** [roletrace.vercel.app](https://roletrace.vercel.app) — create a test account to use the synthetic recruiter workspace. No API key is required.
+
 A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; and answers questions through a floating recruiter chat.
 
 The design uses a warm Paper & Ember palette in light and dark modes. The UI is responsive and requires an email/password account. All included people and recruitment records are synthetic.

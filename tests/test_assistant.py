@@ -17,6 +17,15 @@ def test_unknown_candidate_fact_is_not_invented():
     assert "not established" in result["text"].lower()
 
 
+def test_candidate_answer_with_no_required_gaps_says_so_clearly():
+    from backend.app.assistant import answer
+    from backend.app.sample_data import sample_workspace
+
+    result = answer("What evidence supports Maya Shah for this role?", sample_workspace())
+    assert "every required skill" in result["text"].lower()
+    assert "no evidence for no" not in result["text"].lower()
+
+
 def test_summary_questions_and_email_draft_are_role_specific():
     from backend.app.assistant import generate_draft, generate_questions, generate_summary
     from backend.app.matching import rank

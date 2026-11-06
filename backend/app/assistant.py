@@ -87,8 +87,11 @@ def _fallback(question: str, workspace: Workspace) -> dict:
         if "question" in query or "what should i ask" in query:
             return {"text": "\n".join(generate_questions(jd, candidate, match)), "citations": citations[:4]}
         matched = ", ".join(match.matched_required) or "none of the required skills"
-        gaps = ", ".join(match.missing_required) or "no required-skill gaps"
-        return {"text": f"{candidate.name} has {match.score}% ATS-style JD alignment for {jd.title}. The CV mentions {matched}; it has no evidence for {gaps}.", "citations": citations[:5]}
+        gap_sentence = (
+            f"The CV does not mention {', '.join(match.missing_required)}."
+            if match.missing_required else "The CV mentions every required skill."
+        )
+        return {"text": f"{candidate.name} has {match.score}% ATS-style JD alignment for {jd.title}. The CV mentions {matched}. {gap_sentence}", "citations": citations[:5]}
     for skill in ALIASES:
         if skill.lower() in query and ("who" in query or "which candidate" in query):
             found = [c for c in workspace.candidates if find_skill(skill, c.evidence)]

@@ -47,6 +47,18 @@ def test_workspace_survives_app_restart(tmp_path):
         assert any(c["name"] == "Extra Candidate" for c in second.get("/api/workspace").json()["candidates"])
 
 
+def test_pasted_jd_separates_required_and_preferred_skills_on_one_line(tmp_path):
+    with make_client(tmp_path) as client:
+        register(client, "jd-sections@example.test")
+        added = client.post("/api/jds/paste", json={
+            "title": "Data Analyst",
+            "text": "Required skills: Python, SQL, and data pipelines. Preferred: AWS.",
+        })
+        assert added.status_code == 201
+        assert added.json()["required"] == ["Python", "SQL", "Data Pipelines"]
+        assert added.json()["preferred"] == ["AWS"]
+
+
 def test_chat_and_draft_work_without_api_key(tmp_path, monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     with make_client(tmp_path) as client:

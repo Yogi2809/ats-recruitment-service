@@ -23,8 +23,11 @@ ALIASES: dict[str, list[str]] = {
 
 
 def canonical(skill: str) -> str:
+    for key in ALIASES:
+        if skill.strip().lower() == key.lower():
+            return key
     for key, aliases in ALIASES.items():
-        if skill.strip().lower() == key.lower() or skill.strip().lower() in aliases:
+        if skill.strip().lower() in aliases:
             return key
     return skill.strip()
 

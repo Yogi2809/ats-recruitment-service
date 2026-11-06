@@ -1,6 +1,7 @@
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import os
 from pathlib import Path
+import re
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
@@ -102,12 +103,24 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
 
     def inferred_skills(evidence) -> tuple[list[str], list[str]]:
         required, preferred = [], []
-        for chunk in evidence:
-            skills = [skill for skill in ALIASES if find_skill(skill, [chunk])]
-            target = preferred if "preferred" in chunk.text.lower() else required
-            for skill in skills:
-                if skill not in target:
+        section = "required"
+        heading = re.compile(r"\b(required|preferred)(?:\s+(?:skills|qualifications|experience))?\s*:", re.I)
+
+        def add_skills(chunk, text: str, target: list[str]) -> None:
+            if not text.strip():
+                return
+            segment = replace(chunk, text=text)
+            for skill in ALIASES:
+                if find_skill(skill, [segment]) and skill not in target:
                     target.append(skill)
+
+        for chunk in evidence:
+            start = 0
+            for marker in heading.finditer(chunk.text):
+                add_skills(chunk, chunk.text[start:marker.start()], preferred if section == "preferred" else required)
+                section = marker.group(1).lower()
+                start = marker.end()
+            add_skills(chunk, chunk.text[start:], preferred if section == "preferred" else required)
         return required, preferred
 
     def set_cookie(response: Response, store: AuthStore, user: User, remember: bool) -> None:

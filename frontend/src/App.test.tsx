@@ -48,3 +48,33 @@ test('registered user can open and close floating chat', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Close chat' }))
   expect(screen.queryByRole('dialog', { name: 'Recruiter assistant' })).toBeNull()
 })
+
+test('asking from a candidate review selects that candidate in chat', async () => {
+  const match = {
+    candidate_id: 'maya', candidate_name: 'Maya Shah', score: 90,
+    required_percent: 100, preferred_percent: 0, similarity_percent: 0,
+    matched_required: ['Python'], missing_required: [],
+    matched_preferred: [], missing_preferred: [], evidence: {},
+  }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'demo@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [match] })
+    if (url.endsWith('/api/candidates/maya/analysis')) return Response.json({ candidate: sampleWorkspace.candidates[0], jd: sampleWorkspace.jds[0], match, summary: '', questions: [] })
+    return Response.json({ ok: true })
+  }))
+
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'demo@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.click(await screen.findByRole('button', { name: /01 MS Maya Shah/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /Ask about candidate/ }))
+  expect((screen.getByRole('combobox', { name: 'Discussing' }) as HTMLSelectElement).value).toBe('maya')
+})

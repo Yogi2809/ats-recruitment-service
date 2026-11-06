@@ -26,3 +26,10 @@ def test_score_uses_documented_weights_and_ties_are_stable():
     assert results[0].required_percent == 50
     assert results[0].preferred_percent == 100
     assert results[0].score == round(35 + 20 + results[0].similarity_percent * 0.1)
+
+
+def test_postgresql_does_not_match_sql_only_text():
+    from backend.app.documents import extract_paste
+    from backend.app.matching import find_skill
+
+    assert find_skill("PostgreSQL", extract_paste("Experience writing SQL queries.")) is None
