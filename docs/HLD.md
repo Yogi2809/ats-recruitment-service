@@ -12,6 +12,8 @@ RoleTrace gives a recruiter one private workspace to add a job description (JD),
 flowchart LR
     R[Recruiter browser<br/>React + TypeScript] -->|HTTPS, signed session cookie| A[RoleTrace API<br/>FastAPI on Vercel]
     A -->|SQLAlchemy + TLS| D[(Neon Postgres<br/>users + workspaces)]
+    A --> L[Opt-in shared library<br/>snapshots + stored originals]
+    L --> D
     A --> P[Document extraction<br/>PDF / DOCX / TXT / paste]
     P --> E[JD role and skill suggestions<br/>source quotes + recruiter review]
     A --> M[Deterministic skill matching<br/>TF-IDF similarity]
@@ -37,8 +39,10 @@ The browser and API use the same public origin, so browser requests carry an Htt
 | `users` | Integer ID, normalized unique email, Argon2 password hash | One row per login account. |
 | `workspaces` | `user_id` primary key and foreign key, JSON payload | Exactly one private workspace per user. |
 | Workspace payload | JDs, CVs, selected JD ID, recruitment records, draft records | All reads and changes are scoped to the authenticated user. |
-| JD | ID, title, selected role, reviewed requirements, review time/version, derived required/preferred skills, evidence chunks | One selected JD controls current ranking; review status gates scoring. |
-| Candidate | ID, name, evidence chunks | Compared with the selected JD. |
+| JD | ID, title, department, selected role, reviewed requirements, review time/version, derived required/preferred skills, evidence chunks | One selected JD controls current ranking; review status gates scoring. |
+| Candidate | ID, name, tags, evidence chunks | Compared with the selected JD. |
+| Stored document | Owner ID, document ID, filename and original bytes | New uploads and pastes; deleted with the owner's source. Legacy uploads may not have a stored original. |
+| Shared document | Owner ID, source ID, type, snapshot and optional downloadable bytes | Explicitly published to authenticated users; unshare/source deletion removes the listing; imported copies are independent. |
 | Recruitment record | Candidate ID, stage, assessment note | Saved by the recruiter, used in status chat answers. |
 | Draft | ID, candidate ID/name, job title, kind, text | Editable message snapshot; no mail integration. |
 

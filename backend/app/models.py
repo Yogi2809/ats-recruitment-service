@@ -20,6 +20,7 @@ class JobDescription:
     extractor_version: str | None = None
     reviewed_at: str | None = None
     reviewed_requirements: list[dict] = field(default_factory=list)
+    department: str = "Unassigned"
 
 
 @dataclass
@@ -27,6 +28,7 @@ class Candidate:
     id: str
     name: str
     evidence: list[Evidence]
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -62,11 +64,11 @@ def workspace_from_dict(data: dict) -> Workspace:
         JobDescription(item["id"], item["title"], item["required"], item["preferred"],
                        [Evidence(**evidence) for evidence in item["evidence"]],
                        item.get("selected_role"), item.get("extractor_version"),
-                       item.get("reviewed_at"), item.get("reviewed_requirements", []))
+                       item.get("reviewed_at"), item.get("reviewed_requirements", []), item.get("department", "Unassigned"))
         for item in data["jds"]
     ]
     candidates = [
-        Candidate(item["id"], item["name"], [Evidence(**evidence) for evidence in item["evidence"]])
+        Candidate(item["id"], item["name"], [Evidence(**evidence) for evidence in item["evidence"]], item.get("tags", []))
         for item in data["candidates"]
     ]
     return Workspace(jds, candidates, data["selected_jd_id"], data.get("recruitment", []), data.get("drafts", []), data.get("revision", 0))

@@ -22,6 +22,7 @@ def jd_response(jd: JobDescription, include_evidence: bool = False) -> dict:
     return {
         "id": jd.id,
         "title": jd.title,
+        "department": jd.department,
         "required": jd.required,
         "preferred": jd.preferred,
         "needs_review": jd.reviewed_at is None,
@@ -36,6 +37,7 @@ def candidate_response(candidate: Candidate, include_evidence: bool = False) -> 
     return {
         "id": candidate.id,
         "name": candidate.name,
+        "tags": candidate.tags,
         "evidence": [evidence_excerpt(item) for item in candidate.evidence[:20]] if include_evidence else [],
     }
 

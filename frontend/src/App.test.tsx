@@ -22,6 +22,161 @@ beforeEach(() => {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+test('job and candidate searches are independent', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.change(screen.getByLabelText('Search job descriptions'), { target: { value: 'missing role' } })
+  expect(screen.getByText('No job descriptions match your search.')).toBeTruthy()
+  expect(screen.getByText('Maya Shah')).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Search job descriptions'), { target: { value: '' } })
+  fireEvent.change(screen.getByLabelText('Search candidates'), { target: { value: 'missing candidate' } })
+  expect(screen.getByText('No candidates match these filters.')).toBeTruthy()
+  expect(screen.getByText('Senior Data Engineer')).toBeTruthy()
+})
+
+test('document view errors are visible without opening skill review', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/jds/data-engineer')) return Response.json({ detail: 'Job not found.' }, { status: 404 })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0])
+  expect((await screen.findByRole('alert')).textContent).toContain('Job not found.')
+})
+
+test('compare page filters results using candidate checkboxes', async () => {
+  const candidates = [sampleWorkspace.candidates[0], { id: 'other', name: 'Other Candidate', evidence: [] }]
+  const match = (id: string, name: string) => ({ candidate_id: id, candidate_name: name, score: 80, required_percent: 100, preferred_percent: 0, similarity_percent: 0, matched_required: ['Python'], missing_required: [], matched_preferred: [], missing_preferred: [], evidence: {} })
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json({ ...sampleWorkspace, candidates })
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [match('maya', 'Maya Shah'), match('other', 'Other Candidate')] })
+    if (url.endsWith('/api/candidates/maya/analysis')) return Response.json({ candidate: candidates[0], jd: sampleWorkspace.jds[0], match: match('maya', 'Maya Shah'), summary: '', questions: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Compare candidates' }))
+  expect(screen.getByRole('heading', { name: '2 candidates' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Other Candidate' }))
+  expect(screen.getByRole('heading', { name: '1 candidate' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Other Candidate' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /View evidence and prepare/ }))
+  await screen.findByRole('heading', { name: 'Maya Shah' })
+  fireEvent.click(screen.getByRole('button', { name: 'Back to comparison' }))
+  expect(screen.getByRole('heading', { name: '1 candidate' })).toBeTruthy()
+  expect(screen.getByRole('checkbox', { name: 'Other Candidate' })).toHaveProperty('checked', false)
+})
+
+test('shared library supports viewing and importing an explicitly shared document', async () => {
+  const item = { id: 'shared-one', kind: 'jd', title: 'Shared QA Role', department: 'Tech', tags: [], owned: false, download_available: true }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/library')) return Response.json({ items: [item] })
+    if (url.endsWith('/api/library/shared-one')) return Response.json({ kind: 'jd', document: { title: 'Shared QA Role', evidence: [{ id: 'e', source: 'JD', location: 'line 1', text: 'Python required' }] } })
+    if (url.endsWith('/api/library/shared-one/copy') && options?.method === 'POST') return Response.json({ id: 'copy' })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Shared library' }))
+  await screen.findByText('Shared QA Role')
+  fireEvent.click(screen.getByRole('button', { name: 'View' }))
+  expect(await screen.findByText('Python required')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Download' }).getAttribute('href')).toBe('/api/library/shared-one/download')
+  fireEvent.click(screen.getByRole('button', { name: 'Use a copy' }))
+  expect(await screen.findByRole('heading', { name: 'Documents' })).toBeTruthy()
+})
+
+test('tags can be saved and used to filter candidates', async () => {
+  let current = { ...sampleWorkspace, candidates: [{ ...sampleWorkspace.candidates[0], tags: [] as string[] }, { id: 'other', name: 'Other Candidate', evidence: [], tags: [] as string[] }] }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(current)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: current.jds[0], results: [] })
+    if (url.endsWith('/api/candidates/maya/metadata') && options?.method === 'PATCH') {
+      const body = JSON.parse(String(options.body))
+      current = { ...current, candidates: current.candidates.map(item => item.id === 'maya' ? { ...item, tags: body.tags } : item) }
+      return Response.json({ ok: true })
+    }
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.change(screen.getByLabelText('Tags for Maya Shah'), { target: { value: 'QA, Automation' } })
+  fireEvent.click(screen.getAllByRole('button', { name: 'Save tags' })[0])
+  await screen.findByText('Tags updated.')
+  fireEvent.change(screen.getByLabelText('Filter by tag'), { target: { value: 'QA' } })
+  expect(screen.getByText('Maya Shah')).toBeTruthy()
+  expect(screen.queryByText('Other Candidate')).toBeNull()
+})
+
+test('tag text remains visible when save succeeds but refresh fails', async () => {
+  let reads = 0
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) { reads++; return reads === 1 ? Response.json(sampleWorkspace) : Response.json({ detail: 'Offline' }, { status: 503 }) }
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/candidates/maya/metadata')) return Response.json({ ok: true })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.change(screen.getByLabelText('Tags for Maya Shah'), { target: { value: 'QA' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save tags' }))
+  await screen.findByText(/Saved, but the workspace could not refresh/)
+  expect(screen.getByLabelText('Tags for Maya Shah')).toHaveProperty('value', 'QA')
+})
+
+test('multiple JD uploads keep completed files out of a retry', async () => {
+  const uploads: string[] = []
+  let failSecond = true
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/jds/upload')) {
+      const name = ((options?.body as FormData).get('file') as File).name
+      uploads.push(name)
+      if (name === 'second.txt' && failSecond) { failSecond = false; return Response.json({ detail: 'Temporary failure' }, { status: 422 }) }
+      return Response.json({ id: name })
+    }
+    if (url.includes('/skills/preview')) return Response.json({ roles: [], selected_role: null, suggestions: [], warnings: [], current_required: [], current_preferred: [], needs_review: true })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Upload file' }))
+  const input = document.querySelector('.document-card input[type="file"]') as HTMLInputElement
+  fireEvent.change(input, { target: { files: [new File(['a'], 'first.txt'), new File(['b'], 'second.txt')] } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry remaining JDs (1)' }))
+  await waitFor(() => expect(uploads).toEqual(['first.txt', 'second.txt', 'second.txt']))
+})
+
 test('a conflicting save keeps pasted text and asks the recruiter to reload', async () => {
   let workspaceReads = 0
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {

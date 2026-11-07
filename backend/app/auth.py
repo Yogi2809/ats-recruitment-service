@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from argon2 import PasswordHasher
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import JSON, ForeignKey, Integer, String, create_engine, select
+from sqlalchemy import JSON, ForeignKey, Integer, LargeBinary, String, UniqueConstraint, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
@@ -26,6 +26,26 @@ class WorkspaceRecord(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class StoredDocument(Base):
+    __tablename__ = "stored_documents"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    contents: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+
+class SharedDocument(Base):
+    __tablename__ = "shared_documents"
+    __table_args__ = (UniqueConstraint("user_id", "kind", "source_id"),)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contents: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
 
 @dataclass

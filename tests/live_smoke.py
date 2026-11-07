@@ -155,6 +155,17 @@ def run(base_url):
         expect(request(base_url, bob_cookie, "PATCH", f"/api/candidates/{maya['id']}/recruitment", body={"stage": "Offer"}), 404, "cross-account status")
         checks.append("cross-account resource access denied")
 
+        shared = expect(request(base_url, alice_cookie, "POST", f"/api/library/share/jd/{jd['id']}"), 201, "share synthetic JD")
+        library = expect(request(base_url, bob_cookie, "GET", "/api/library"), 200, "shared library")
+        assert any(item['id'] == shared['id'] for item in library['items'])
+        expect(request(base_url, bob_cookie, "DELETE", f"/api/library/{shared['id']}"), 404, "non-owner cannot unshare")
+        copied = expect(request(base_url, bob_cookie, "POST", f"/api/library/{shared['id']}/copy"), 200, "copy shared JD")
+        assert copied['id'] != jd['id']
+        expect(request(base_url, alice_cookie, "DELETE", f"/api/library/{shared['id']}"), 200, "unshare synthetic JD")
+        expect(request(base_url, bob_cookie, "GET", f"/api/library/{shared['id']}"), 404, "revoked share")
+        expect(request(base_url, bob_cookie, "DELETE", f"/api/jds/{copied['id']}"), 200, "remove copied synthetic JD")
+        checks.append("opt-in shared library, owner control, independent copy and revocation")
+
         docx_path, pdf_path = root / "full_stack.docx", root / "Synthetic_PDF_Candidate.pdf"
         make_docx(docx_path)
         make_pdf(pdf_path)

@@ -2,16 +2,17 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import os
 from pathlib import Path
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from sqlalchemy import func, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from .auth import AuthStore, User, WorkspaceRecord, create_auth_store
+from .auth import AuthStore, User, WorkspaceRecord, StoredDocument, SharedDocument, create_auth_store
 from .assistant import answer, generate_draft, generate_questions, generate_summary
 from .documents import extract_document, extract_paste
 from .matching import rank
@@ -36,6 +37,14 @@ class PastedJD(BaseModel):
 class PastedCandidate(BaseModel):
     name: str
     text: str
+
+
+class JDMetadata(BaseModel):
+    department: str
+
+
+class CandidateMetadata(BaseModel):
+    tags: list[str]
 
 
 class SkillsUpdate(BaseModel):
@@ -109,7 +118,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
                 return workspace_from_dict(existing.payload)
             return current
 
-    def save_workspace(user: User, current: Workspace) -> None:
+    def save_workspace(user: User, current: Workspace, extra=None) -> None:
         previous_revision = current.revision
         client_revision = getattr(user, "_workspace_revision", None)
         if client_revision is not None and client_revision != previous_revision:
@@ -125,6 +134,8 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             if result.rowcount != 1:
                 session.rollback()
                 raise HTTPException(status_code=409, detail="Your workspace changed in another session. Refresh and try this action again.")
+            if extra is not None:
+                extra(session)
             session.commit()
 
     def get_candidate(current: Workspace, candidate_id: str) -> Candidate:
@@ -212,7 +223,10 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.drafts = [item for item in current.drafts if item["candidate_id"] not in bundled_candidates]
         if current.selected_jd_id in bundled_jds:
             current.selected_jd_id = current.jds[0].id if current.jds else ""
-        save_workspace(user, current)
+        def remove_files(session):
+            session.execute(delete(SharedDocument).where(SharedDocument.user_id == user.id, SharedDocument.source_id.in_(bundled_jds | bundled_candidates)))
+            session.execute(delete(StoredDocument).where(StoredDocument.user_id == user.id, StoredDocument.id.in_(bundled_jds | bundled_candidates)))
+        save_workspace(user, current, remove_files)
         return {"ok": True}
 
     @app.post("/api/jds/paste", status_code=201)
@@ -225,20 +239,21 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd = JobDescription(uuid4().hex, body.title.strip() or "Untitled job", body.required or [], body.preferred or [], evidence, extractor_version="2")
         current.jds.append(jd)
         current.selected_jd_id = jd.id
-        save_workspace(user, current)
+        save_workspace(user, current, lambda session: session.add(StoredDocument(id=jd.id, user_id=user.id, filename='job-description.txt', contents=body.text.encode('utf-8'))))
         return jd_response(jd, include_evidence=True)
 
     @app.post("/api/jds/upload", status_code=201)
     async def add_uploaded_jd(file: UploadFile = File(...), user: User = Depends(current_user)):
         current = workspace(user)
         try:
-            evidence = extract_document(file.filename or "job.txt", await file.read())
+            raw = await file.read()
+            evidence = extract_document(file.filename or "job.txt", raw)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         jd = JobDescription(uuid4().hex, Path(file.filename or "Job").stem.replace("_", " "), [], [], evidence, extractor_version="2")
         current.jds.append(jd)
         current.selected_jd_id = jd.id
-        save_workspace(user, current)
+        save_workspace(user, current, lambda session: session.add(StoredDocument(id=jd.id, user_id=user.id, filename=Path(file.filename or 'job.txt').name[:255], contents=raw)))
         return jd_response(jd, include_evidence=True)
 
     @app.post("/api/jds/{jd_id}/select")
@@ -249,6 +264,10 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         save_workspace(user, current)
         return {"selected_jd_id": jd_id}
 
+    @app.get('/api/jds/{jd_id}')
+    def view_jd(jd_id: str, user: User = Depends(current_user)):
+        return asdict(get_jd(workspace(user), jd_id))
+
     @app.delete("/api/jds/{jd_id}")
     def remove_jd(jd_id: str, user: User = Depends(current_user)):
         current = workspace(user)
@@ -256,8 +275,22 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.jds = [item for item in current.jds if item.id != jd_id]
         if current.selected_jd_id == jd_id:
             current.selected_jd_id = current.jds[0].id if current.jds else ""
-        save_workspace(user, current)
+        def remove_files(session):
+            session.execute(delete(SharedDocument).where(SharedDocument.user_id == user.id, SharedDocument.kind == 'jd', SharedDocument.source_id == jd_id))
+            session.execute(delete(StoredDocument).where(StoredDocument.user_id == user.id, StoredDocument.id == jd_id))
+        save_workspace(user, current, remove_files)
         return {"ok": True}
+
+    @app.patch("/api/jds/{jd_id}/metadata")
+    def update_jd_metadata(jd_id: str, body: JDMetadata, user: User = Depends(current_user)):
+        current = workspace(user)
+        jd = get_jd(current, jd_id)
+        department = body.department.strip()
+        if not department or len(department) > 60:
+            raise HTTPException(status_code=422, detail="Enter a department of up to 60 characters.")
+        jd.department = department
+        save_workspace(user, current)
+        return jd_response(jd)
 
     @app.patch("/api/jds/{jd_id}")
     def update_jd(jd_id: str, body: SkillsUpdate, user: User = Depends(current_user)):
@@ -346,19 +379,20 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         candidate = Candidate(uuid4().hex, body.name.strip() or "Unnamed candidate", evidence)
         current.candidates.append(candidate)
-        save_workspace(user, current)
+        save_workspace(user, current, lambda session: session.add(StoredDocument(id=candidate.id, user_id=user.id, filename='candidate-cv.txt', contents=body.text.encode('utf-8'))))
         return candidate_response(candidate, include_evidence=True)
 
     @app.post("/api/candidates/upload", status_code=201)
     async def add_uploaded_candidate(file: UploadFile = File(...), user: User = Depends(current_user)):
         current = workspace(user)
         try:
-            evidence = extract_document(file.filename or "resume.txt", await file.read())
+            raw = await file.read()
+            evidence = extract_document(file.filename or "resume.txt", raw)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         candidate = Candidate(uuid4().hex, Path(file.filename or "Candidate").stem.replace("_", " "), evidence)
         current.candidates.append(candidate)
-        save_workspace(user, current)
+        save_workspace(user, current, lambda session: session.add(StoredDocument(id=candidate.id, user_id=user.id, filename=Path(file.filename or 'resume.txt').name[:255], contents=raw)))
         return candidate_response(candidate, include_evidence=True)
 
     @app.delete("/api/candidates/{candidate_id}")
@@ -367,8 +401,111 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         get_candidate(current, candidate_id)
         current.candidates = [item for item in current.candidates if item.id != candidate_id]
         current.recruitment = [item for item in current.recruitment if item["candidate_id"] != candidate_id]
-        save_workspace(user, current)
+        def remove_files(session):
+            session.execute(delete(SharedDocument).where(SharedDocument.user_id == user.id, SharedDocument.kind == 'candidate', SharedDocument.source_id == candidate_id))
+            session.execute(delete(StoredDocument).where(StoredDocument.user_id == user.id, StoredDocument.id == candidate_id))
+        save_workspace(user, current, remove_files)
         return {"ok": True}
+
+    @app.get('/api/candidates/{candidate_id}')
+    def view_candidate(candidate_id: str, user: User = Depends(current_user)):
+        return asdict(get_candidate(workspace(user), candidate_id))
+
+    @app.patch("/api/candidates/{candidate_id}/metadata")
+    def update_candidate_metadata(candidate_id: str, body: CandidateMetadata, user: User = Depends(current_user)):
+        current = workspace(user)
+        candidate = get_candidate(current, candidate_id)
+        tags = [tag.strip() for tag in body.tags]
+        if len(tags) > 20 or any(not tag or len(tag) > 40 for tag in tags) or len({tag.casefold() for tag in tags}) != len(tags):
+            raise HTTPException(status_code=422, detail="Use up to 20 unique tags, each 1–40 characters.")
+        candidate.tags = tags
+        save_workspace(user, current)
+        return candidate_response(candidate)
+
+    @app.get('/api/library')
+    def list_shared(user: User = Depends(current_user)):
+        with app.state.auth.session_factory() as session:
+            rows = session.execute(select(SharedDocument.id, SharedDocument.user_id, SharedDocument.kind, SharedDocument.snapshot, SharedDocument.filename)).all()
+            return {'items': [{'id': row.id, 'kind': row.kind, 'title': row.snapshot.get('title') or row.snapshot.get('name'),
+                               'department': row.snapshot.get('department', 'Unassigned'), 'tags': row.snapshot.get('tags', []),
+                               'owned': row.user_id == user.id, 'download_available': row.filename is not None,
+                               'download_is_extracted': row.filename == 'extracted-text.txt'} for row in rows]}
+
+    @app.post('/api/library/share/{kind}/{source_id}', status_code=201)
+    def share_document(kind: str, source_id: str, user: User = Depends(current_user)):
+        current = workspace(user)
+        if kind not in {'jd', 'candidate'}:
+            raise HTTPException(status_code=404, detail='Document not found.')
+        source = get_jd(current, source_id) if kind == 'jd' else get_candidate(current, source_id)
+        shared_id = uuid4().hex
+        def publish(session):
+            existing = session.scalar(select(SharedDocument.id).where(SharedDocument.user_id == user.id, SharedDocument.kind == kind, SharedDocument.source_id == source_id))
+            if existing:
+                raise HTTPException(status_code=409, detail='This document is already shared.')
+            original = session.get(StoredDocument, source_id)
+            pasted = source.evidence and all(item.source == 'Pasted text' for item in source.evidence)
+            filename = original.filename if original and original.user_id == user.id else ('extracted-text.txt' if pasted else None)
+            contents = original.contents if original and original.user_id == user.id else ('\n'.join(e.text for e in source.evidence).encode('utf-8') if pasted else None)
+            session.add(SharedDocument(id=shared_id, user_id=user.id, kind=kind, source_id=source_id, snapshot=asdict(source), filename=filename, contents=contents))
+        try:
+            save_workspace(user, current, publish)
+        except IntegrityError as exc:
+            raise HTTPException(status_code=409, detail='This document is already shared.') from exc
+        return {'id': shared_id}
+
+    @app.get('/api/library/{shared_id}')
+    def view_shared(shared_id: str, user: User = Depends(current_user)):
+        with app.state.auth.session_factory() as session:
+            item = session.get(SharedDocument, shared_id)
+            if item is None:
+                raise HTTPException(status_code=404, detail='Shared document not found.')
+            return {'id': item.id, 'kind': item.kind, 'document': item.snapshot, 'owned': item.user_id == user.id, 'download_available': item.filename is not None}
+
+    @app.get('/api/library/{shared_id}/download')
+    def download_shared(shared_id: str, user: User = Depends(current_user)):
+        with app.state.auth.session_factory() as session:
+            item = session.get(SharedDocument, shared_id)
+            if item is None:
+                raise HTTPException(status_code=404, detail='Shared document not found.')
+            if item.contents is None or item.filename is None:
+                raise HTTPException(status_code=404, detail='Original file is unavailable for this older document.')
+            return Response(content=item.contents, media_type='application/octet-stream', headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(item.filename, safe='')}"})
+
+    @app.delete('/api/library/{shared_id}')
+    def unshare_document(shared_id: str, user: User = Depends(current_user)):
+        with app.state.auth.session_factory() as session:
+            item = session.get(SharedDocument, shared_id)
+            if item is None or item.user_id != user.id:
+                raise HTTPException(status_code=404, detail='Shared document not found.')
+            session.delete(item)
+            session.commit()
+        return {'ok': True}
+
+    @app.post('/api/library/{shared_id}/copy')
+    def copy_shared(shared_id: str, user: User = Depends(current_user)):
+        current = workspace(user)
+        with app.state.auth.session_factory() as session:
+            item = session.get(SharedDocument, shared_id)
+            if item is None:
+                raise HTTPException(status_code=404, detail='Shared document not found.')
+            kind, snapshot, filename, contents = item.kind, item.snapshot, item.filename, item.contents
+        new_id = uuid4().hex
+        snapshot = {**snapshot, 'id': new_id}
+        temp = workspace_from_dict({'jds': [snapshot] if kind == 'jd' else [], 'candidates': [snapshot] if kind == 'candidate' else [], 'selected_jd_id': ''})
+        if kind == 'jd':
+            source = temp.jds[0]
+            current.jds.append(source)
+            current.selected_jd_id = source.id
+        else:
+            source = temp.candidates[0]
+            current.candidates.append(source)
+        def copy_file(session):
+            if session.get(SharedDocument, shared_id, with_for_update=True) is None:
+                raise HTTPException(status_code=404, detail='This document is no longer shared.')
+            if filename is not None and contents is not None:
+                session.add(StoredDocument(id=new_id, user_id=user.id, filename=filename, contents=contents))
+        save_workspace(user, current, copy_file)
+        return jd_response(source) if kind == 'jd' else candidate_response(source)
 
     @app.patch("/api/candidates/{candidate_id}/recruitment")
     def update_recruitment(candidate_id: str, body: RecruitmentUpdate, user: User = Depends(current_user)):

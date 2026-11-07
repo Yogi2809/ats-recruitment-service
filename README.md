@@ -4,7 +4,7 @@
 
 A recruiter workspace for reviewing synthetic CVs against job descriptions. It extracts text from PDF, DOCX, and TXT files or pasted text; ranks candidates with an explainable **ATS-style JD alignment** percentage; shows the matching lines and gaps; prepares interview questions and email drafts; records candidate recruitment stages; and answers questions through a floating recruiter chat. Choosing a file in the upload view saves it automatically; pasted text uses the Add button.
 
-Each document can contain up to 4 MB of readable text or file data. The deployed limit leaves room beneath [Vercel's 4.5 MB request-body cap](https://vercel.com/docs/functions/limitations). The database keeps the extracted text; ordinary API responses return compact excerpts so comparisons remain usable as documents accumulate.
+Each document can contain up to 4 MB of readable text or file data. The deployed limit leaves room beneath [Vercel's 4.5 MB request-body cap](https://vercel.com/docs/functions/limitations). The database keeps extracted text and, for new documents, the uploaded file or original pasted text; ordinary workspace responses return compact excerpts so comparisons remain usable as documents accumulate.
 
 The design uses a warm Paper & Ember palette in light and dark modes. The UI is responsive and requires an email/password account. All included people and recruitment records are synthetic.
 
@@ -32,12 +32,14 @@ For frontend development, run `npm run dev` in `frontend/` while the Python serv
 ## Five-minute demo
 
 1. Create an account. The workspace starts empty.
-2. Open **Documents**. Upload `sample_data/senior_data_engineer_jd.txt` and one or more CVs from `sample_data/`, or paste synthetic text into the separate JD and CV forms. **Review skills** opens after adding the JD. Check the source quotes, adjust required/preferred labels, and save before comparing.
-3. Open **Compare candidates**. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
+2. Open **Documents**. Upload one or more JDs and CVs from `sample_data/`, or paste synthetic text into the separate forms. **Review skills** opens after adding a JD. Check the source quotes, adjust required/preferred labels, and save before comparing. Find JDs and CVs with separate searches, assign a JD department, and add candidate tags.
+3. Open **Compare candidates**. Select a JD and check the candidates to include. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
 4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions. Save a recruitment stage and an optional assessment note.
 5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, “What should I ask Maya?”, and “What stage is Maya at?” Open the source excerpts beneath each answer.
 6. Open **Email drafts**. Generate an interview invitation or assessment instructions, edit the text, save it, and copy it. The app does not send email.
 7. Switch light/dark mode in the top bar, then log out in the sidebar.
+
+In **Documents**, choose **Share** and confirm to publish an explicit snapshot to the **Shared library** for other registered users. They can view the text, download the original when available, and add an independent copy to their workspace. Unsharing or deleting the owner's document removes the library listing; copies already made by others remain. Existing documents are private unless shared. For uploads created before original-file storage was added, the original may be unavailable; pasted legacy documents offer reconstructed extracted text instead.
 
 Accounts created before the empty-workspace update may still contain the original bundled examples. In **Documents**, use **Remove bundled samples** to remove those examples and their related drafts while keeping your own uploads.
 
