@@ -8,21 +8,31 @@ type SkillPreview = { roles: string[]; selected_role: string | null; suggestions
 type Candidate = { id: string; name: string; evidence: Evidence[] }
 type Match = { candidate_id: string; candidate_name: string; score: number; required_percent: number; preferred_percent: number; similarity_percent: number; matched_required: string[]; missing_required: string[]; matched_preferred: string[]; missing_preferred: string[]; evidence: Record<string, Evidence> }
 type Draft = { id: string; candidate_id: string; candidate_name: string; job_title: string; kind: string; text: string }
-type Workspace = { jds: JD[]; candidates: Candidate[]; selected_jd_id: string; recruitment: { candidate_id: string; stage: string; assessment: string }[]; drafts: Draft[] }
+type Workspace = { revision?: number; jds: JD[]; candidates: Candidate[]; selected_jd_id: string; recruitment: { candidate_id: string; stage: string; assessment: string }[]; drafts: Draft[] }
 type Analysis = { candidate: Candidate; jd: JD; match: Match; summary: string; questions: string[] }
 type ChatMessage = { role: 'user' | 'assistant'; text: string; citations?: Evidence[] }
 type Page = 'overview' | 'documents' | 'compare' | 'candidate' | 'drafts'
 
+class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message) }
+}
+
+let workspaceRevision: number | undefined
+let lastRefreshSucceeded = false
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, { credentials: 'include', ...options, headers: options.body instanceof FormData ? options.headers : { 'Content-Type': 'application/json', ...options.headers } })
+  const headers = new Headers(options.headers)
+  if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (!headers.has('X-Workspace-Revision') && workspaceRevision !== undefined && ['PATCH', 'PUT', 'DELETE'].includes(options.method || '')) headers.set('X-Workspace-Revision', String(workspaceRevision))
+  const response = await fetch(path, { credentials: 'include', ...options, headers })
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error.detail || `Request failed (${response.status})`)
+    throw new ApiError(error.detail || `Request failed (${response.status})`, response.status)
   }
   return response.json() as Promise<T>
 }
 
 const json = (body: object) => JSON.stringify(body)
+const versionHeader = (revision?: number): Record<string, string> => revision === undefined ? {} : { 'X-Workspace-Revision': String(revision) }
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 const scoreLabel = (score: number) => score >= 80 ? 'Strong evidence match' : score >= 55 ? 'Partial evidence match' : 'Needs review'
 const initials = (name: string) => name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()
@@ -84,6 +94,7 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (window.localStorage?.getItem('roletrace-theme') as 'light' | 'dark') || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
   const [notice, setNotice] = useState('')
+  const [mutationBusy, setMutationBusy] = useState(false)
   const activeJD = workspace?.jds.find(jd => jd.id === workspace.selected_jd_id)
   const top = results[0]
 
@@ -93,20 +104,31 @@ export default function App() {
 
   async function refresh() {
     const [w, comparison] = await Promise.all([api<Workspace>('/api/workspace'), api<{ results: Match[] }>('/api/compare')])
+    workspaceRevision = w.revision
     setWorkspace(w); setResults(comparison.results)
   }
   async function run(action: () => Promise<unknown>, success?: string): Promise<boolean> {
-    setNotice('')
-    try { await action(); await refresh(); if (success) setNotice(success); return true }
-    catch (err) { setNotice((err as Error).message); return false }
+    setNotice(''); setMutationBusy(true); lastRefreshSucceeded = false
+    try { await action() }
+    catch (err) {
+      if (err instanceof ApiError && err.status === 409 && err.message.startsWith('Your workspace changed')) {
+        setNotice('Your workspace changed in another session. Copy unsaved edits, reload the page, then try again.')
+      } else setNotice((err as Error).message)
+      setMutationBusy(false)
+      return false
+    }
+    try { await refresh(); lastRefreshSucceeded = true; if (success) setNotice(success) }
+    catch { setNotice('Saved, but the workspace could not refresh. Reload the page to see the latest data.') }
+    setMutationBusy(false)
+    return true
   }
   async function openCandidate(id: string) {
     setNotice('')
     try { setAnalysis(await api<Analysis>(`/api/candidates/${id}/analysis`)); setPage('candidate') }
     catch (err) { setNotice((err as Error).message) }
   }
-  async function logout() { await api('/api/auth/logout', { method: 'POST' }); setEmail(null); setWorkspace(null); setResults([]); setPage('overview'); setChatOpen(false) }
-  const nav = (target: Page) => { setPage(target); setMobileNav(false); setNotice('') }
+  async function logout() { if (mutationBusy) return; await api('/api/auth/logout', { method: 'POST' }); workspaceRevision = undefined; setEmail(null); setWorkspace(null); setResults([]); setPage('overview'); setChatOpen(false) }
+  const nav = (target: Page) => { if (mutationBusy) return; setPage(target); setMobileNav(false); setNotice('') }
 
   if (checking) return <div className="loading-page"><span className="brand-symbol">R<span>·</span></span><p>Opening RoleTrace…</p></div>
   if (!email) return <AuthView onAuthenticated={setEmail} />
@@ -124,19 +146,18 @@ export default function App() {
     </aside>
     {mobileNav && <button className="nav-scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
     <div className="main-column">
-      <header className="topbar"><button className="icon-button mobile-only" aria-label="Open menu" onClick={() => setMobileNav(true)}><Menu size={22} /></button><span className="topbar-context">Recruitment workspace <span className="topbar-separator">/</span> <strong>{page === 'candidate' ? 'Candidate view' : page === 'compare' ? 'Comparison' : page === 'documents' ? 'Documents' : page === 'drafts' ? 'Email drafts' : 'Overview'}</strong></span><div className="topbar-right"><button className="icon-button theme-button" aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}</button></div></header>
+      <header className="topbar"><button className="icon-button mobile-only" aria-label="Open menu" onClick={() => setMobileNav(true)}><Menu size={22} /></button><span className="topbar-context">Recruitment workspace <span className="topbar-separator">/</span> <strong>{page === 'candidate' ? 'Candidate view' : page === 'compare' ? 'Comparison' : page === 'documents' ? 'Documents' : page === 'drafts' ? 'Email drafts' : 'Overview'}</strong></span><div className="topbar-right">{!chatOpen && <button className="chat-launcher" aria-label="Open recruiter assistant" title="Open recruiter assistant" onClick={() => setChatOpen(true)}><MessageCircle size={25} /></button>}<button className="icon-button theme-button" aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}</button></div></header>
       <main className="page-content">
         {notice && <div className="notice" role="status">{notice}<button aria-label="Dismiss message" onClick={() => setNotice('')}><X size={16} /></button></div>}
-        {!workspace ? <div className="loading-content">Loading your workspace…</div> : <>
+        {!workspace ? <div className="loading-content">Loading your workspace…</div> : <fieldset className="mutation-surface" disabled={mutationBusy} aria-busy={mutationBusy}>
           {page === 'overview' && <Overview workspace={workspace} results={results} activeJD={activeJD} onDocuments={() => nav('documents')} onCompare={() => nav('compare')} onCandidate={openCandidate} />}
           {page === 'documents' && <Documents workspace={workspace} activeJD={activeJD} run={run} onCompare={() => nav('compare')} />}
           {page === 'compare' && <Compare activeJD={activeJD} results={results} candidateCount={workspace.candidates.length} onCandidate={openCandidate} onDocuments={() => nav('documents')} />}
-          {page === 'candidate' && analysis && <CandidateView analysis={analysis} stage={workspace.recruitment.find(r => r.candidate_id === analysis.candidate.id)} onBack={() => nav('compare')} onDrafts={() => nav('drafts')} onSaveStatus={(candidateId, stage, assessment) => run(() => api(`/api/candidates/${candidateId}/recruitment`, { method: 'PATCH', body: json({ stage, assessment }) }), 'Recruitment status saved.')} />}
+          {page === 'candidate' && analysis && <CandidateView analysis={analysis} stage={workspace.recruitment.find(r => r.candidate_id === analysis.candidate.id)} onBack={() => nav('compare')} onDrafts={() => nav('drafts')} onSaveStatus={(candidateId, stage, assessment, revision) => run(() => api(`/api/candidates/${candidateId}/recruitment`, { method: 'PATCH', headers: versionHeader(revision), body: json({ stage, assessment }) }), 'Recruitment status saved.')} />}
           {page === 'drafts' && <Drafts workspace={workspace} activeJD={activeJD} run={run} />}
-        </>}
+        </fieldset>}
       </main>
     </div>
-    {!chatOpen && <button className="chat-launcher" aria-label="Open recruiter assistant" title="Open recruiter assistant" onClick={() => setChatOpen(true)}><MessageCircle size={25} /></button>}
     {chatOpen && <ChatDrawer workspace={workspace} initialCandidateId={page === 'candidate' ? analysis?.candidate.id : undefined} onClose={() => setChatOpen(false)} />}
   </div>
 }
@@ -144,7 +165,7 @@ export default function App() {
 function Overview({ workspace, results, activeJD, onDocuments, onCompare, onCandidate }: { workspace: Workspace; results: Match[]; activeJD?: JD; onDocuments: () => void; onCompare: () => void; onCandidate: (id: string) => void }) {
   const top = results[0]
   return <><div className="page-heading"><div><span className="eyebrow">YOUR HIRING DESK</span><h1>Good to see you.</h1><p>Review the evidence behind every match.</p></div><button className="button primary" onClick={onDocuments}><Plus size={18} /> Add documents</button></div>
-    <div className="overview-stats"><div className="stat-card"><span>Active role</span><strong>{activeJD?.title || 'No role selected'}</strong><button className="inline-link" onClick={onDocuments}>Manage job descriptions <ArrowRight size={15} /></button></div><div className="stat-card"><span>Candidates</span><strong className="stat-number">{workspace.candidates.length}</strong><span className="muted">In this workspace</span></div><div className="stat-card"><span>Top alignment</span><strong className="stat-number">{top ? `${top.score}%` : '—'}</strong><span className="muted">{top?.candidate_name || 'Add a candidate'}</span></div></div>
+    <div className="overview-stats"><div className="stat-card"><span>Active role</span><strong>{activeJD?.title || 'No role selected'}</strong><button className="inline-link" onClick={onDocuments}>Manage job descriptions <ArrowRight size={15} /></button></div><div className="stat-card"><span>Candidates</span><strong className="stat-number">{workspace.candidates.length}</strong><span className="muted">In this workspace</span></div><div className="stat-card"><span>Top alignment</span><strong className="stat-number">{top ? `${top.score}%` : '—'}</strong><span className="muted">{top?.candidate_name || (activeJD?.needs_review ? 'Review JD skills' : workspace.candidates.length ? 'No alignment yet' : 'Add a candidate')}</span></div></div>
     <div className="section-heading"><div><span className="eyebrow">AT A GLANCE</span><h2>Candidate overview</h2></div><button className="inline-link" onClick={onCompare}>View comparison <ArrowRight size={16} /></button></div>
     <div className="panel candidate-list">{results.length ? results.slice(0, 4).map((result, index) => <button className="candidate-row" key={result.candidate_id} onClick={() => onCandidate(result.candidate_id)}><span className="rank-index">{String(index + 1).padStart(2, '0')}</span><span className="candidate-name"><span className="small-avatar">{initials(result.candidate_name)}</span><span><strong>{result.candidate_name}</strong><small>{scoreLabel(result.score)}</small></span></span><span className="row-skills">{result.matched_required.slice(0, 3).map(skill => <span className="skill-pill found" key={skill}>{skill}</span>)}</span><strong className="row-score">{result.score}%</strong><ArrowRight size={18} className="row-arrow" /></button>) : <div className="empty-state">{activeJD?.needs_review ? "Review this job description's skills to see matches." : activeJD ? "Add a CV to compare candidates." : "Add a job description and a CV to see matches."}</div>}</div>
     <div className="overview-bottom"><div className="panel insight-panel"><span className="eyebrow">HOW IT WORKS</span><h3>From documents to decisions</h3><p>RoleTrace compares the skills named in a job description with evidence in each CV. Open any candidate to inspect the exact lines behind the result.</p><button className="inline-link" onClick={onCompare}>Explore the comparison <ArrowRight size={16} /></button></div><div className="panel quiet-panel"><span className="eyebrow">A USEFUL REMINDER</span><h3>Evidence, not a verdict.</h3><p>A missing CV mention is a question to ask, not a final judgment about a person.</p></div></div>
@@ -163,16 +184,19 @@ function Documents({ workspace, activeJD, run, onCompare }: { workspace: Workspa
   const [uploadingJD, setUploadingJD] = useState(false)
   const [uploadingCV, setUploadingCV] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [editJD, setEditJD] = useState<JD | null>(null)
+  const [editVersion, setEditVersion] = useState<number | undefined>()
   const [title, setTitle] = useState(activeJD?.title || '')
   const [required, setRequired] = useState(activeJD?.required.join(', ') || '')
   const [preferred, setPreferred] = useState(activeJD?.preferred.join(', ') || '')
   const [reviewId, setReviewId] = useState<string | null>(null)
+  const [reviewVersion, setReviewVersion] = useState<number | undefined>()
   const [preview, setPreview] = useState<SkillPreview | null>(null)
   const [reviewItems, setReviewItems] = useState<SkillSuggestion[]>([])
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewError, setReviewError] = useState('')
   const [newSkill, setNewSkill] = useState('')
-  useEffect(() => { setTitle(activeJD?.title || ''); setRequired(activeJD?.required.join(', ') || ''); setPreferred(activeJD?.preferred.join(', ') || ''); setEditing(false) }, [activeJD?.id])
+  useEffect(() => { if (!editing) { setTitle(activeJD?.title || ''); setRequired(activeJD?.required.join(', ') || ''); setPreferred(activeJD?.preferred.join(', ') || '') } }, [activeJD?.id, editing])
   useEffect(() => { if (reviewId && preview) document.querySelector('.review-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }) }, [reviewId, preview])
   async function loadPreview(jdId: string, role: string | null = null) {
     setReviewBusy(true); setReviewError('')
@@ -182,15 +206,14 @@ function Documents({ workspace, activeJD, run, onCompare }: { workspace: Workspa
     } catch (error) { setReviewError((error as Error).message) }
     finally { setReviewBusy(false) }
   }
-  async function openReview(jdId: string) { setReviewId(jdId); setPreview(null); setReviewItems([]); await loadPreview(jdId) }
+  async function openReview(jdId: string) { setReviewVersion(workspaceRevision); setReviewId(jdId); setPreview(null); setReviewItems([]); await loadPreview(jdId) }
   async function saveReview() {
     if (!reviewId || !preview) return
     setReviewBusy(true); setReviewError('')
     try {
-      await api(`/api/jds/${reviewId}/skills`, { method: 'PUT', body: json({ selected_role: preview.selected_role, requirements: reviewItems }) })
       const hasScoredSkill = reviewItems.some(item => item.kind === 'skill' && (item.category === 'required' || item.category === 'preferred'))
-      await run(async () => undefined, hasScoredSkill ? 'Reviewed skills saved. Comparison is ready.' : 'Review saved. Add a required or preferred skill to enable comparison.')
-      setReviewId(null); setPreview(null); setReviewItems([])
+      const saved = await run(() => api(`/api/jds/${reviewId}/skills`, { method: 'PUT', headers: versionHeader(reviewVersion), body: json({ selected_role: preview.selected_role, requirements: reviewItems }) }), hasScoredSkill ? 'Reviewed skills saved. Comparison is ready.' : 'Review saved. Add a required or preferred skill to enable comparison.')
+      if (saved) { setReviewId(null); setPreview(null); setReviewItems([]) }
     } catch (error) { setReviewError((error as Error).message) }
     finally { setReviewBusy(false) }
   }
@@ -205,9 +228,18 @@ function Documents({ workspace, activeJD, run, onCompare }: { workspace: Workspa
   }
   async function uploadCVs(files: File[]) {
     setCvFiles(files); setUploadingCV(true)
-    const saved = await run(async () => { if (files.some(file => file.size > MAX_UPLOAD_BYTES)) throw new Error('File exceeds the 4 MB limit.'); for (const file of files) { const form = new FormData(); form.append('file', file); await api('/api/candidates/upload', { method: 'POST', body: form }) } }, 'Candidate CV uploaded.')
-    if (saved) setCvFiles([])
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index]
+      const saved = await run(async () => { if (file.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 4 MB limit.'); const form = new FormData(); form.append('file', file); await api('/api/candidates/upload', { method: 'POST', body: form }) }, 'Candidate CV uploaded.')
+      if (!saved) { setCvFiles(files.slice(index)); setUploadingCV(false); return }
+      setCvFiles(files.slice(index + 1))
+    }
     setUploadingCV(false)
+  }
+  async function deleteJD(jd: JD) {
+    if (!window.confirm(`Delete ${jd.title}? This cannot be undone.`)) return
+    const deleted = await run(() => api(`/api/jds/${jd.id}`, { method: 'DELETE' }), 'Job description deleted.')
+    if (deleted && reviewId === jd.id) { setReviewId(null); setPreview(null); setReviewItems([]) }
   }
   const parse = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean)
   const hasBundledSamples = workspace.jds.some(jd => ['data-engineer', 'fullstack'].includes(jd.id)) || workspace.candidates.some(candidate => ['maya', 'arjun', 'neha', 'samira', 'dev', 'lena'].includes(candidate.id))
@@ -217,8 +249,8 @@ function Documents({ workspace, activeJD, run, onCompare }: { workspace: Workspa
   }
   return <><div className="page-heading"><div><span className="eyebrow">SOURCE MATERIAL</span><h1>Documents</h1><p>Bring in a role and the CVs you want to review.</p></div><button className="button secondary" onClick={onCompare}>View comparison <ArrowRight size={17} /></button></div>
     <div className="document-grid"><section className="panel document-card"><div className="card-heading"><span className="card-icon"><FileText size={21} /></span><div><h2>Job description</h2><p>Upload a file or paste the text.</p></div></div><div className="segmented"><button className={jdMethod === 'paste' ? 'selected' : ''} onClick={() => setJdMethod('paste')}>Paste text</button><button className={jdMethod === 'upload' ? 'selected' : ''} onClick={() => setJdMethod('upload')}>Upload file</button></div><form onSubmit={submitJD}>{jdMethod === 'paste' ? <><label>Role title<input value={jdTitle} onChange={e => setJdTitle(e.target.value)} placeholder="e.g. Senior Data Engineer" required /></label><label>Job description<textarea value={jdText} onChange={e => setJdText(e.target.value)} placeholder="Paste the full job description here…" rows={8} required /></label></> : <label className="file-drop"><Upload size={22} /><strong>{jdFile?.name || 'Choose JD file'}</strong><span>PDF, DOCX or TXT · up to 4 MB</span><input type="file" accept=".pdf,.docx,.txt" disabled={uploadingJD} onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) uploadJD(file) }} /></label>}{jdMethod === 'paste' ? <button className="button primary" type="submit">Add job description <Plus size={17} /></button> : <p className="muted">{uploadingJD ? 'Uploading job description…' : 'Choosing a file uploads it automatically.'}</p>}</form></section>
-      <section className="panel document-card"><div className="card-heading"><span className="card-icon sage"><Users size={21} /></span><div><h2>Candidate CV</h2><p>Add one or several candidates.</p></div></div><div className="segmented"><button className={cvMethod === 'paste' ? 'selected' : ''} onClick={() => setCvMethod('paste')}>Paste text</button><button className={cvMethod === 'upload' ? 'selected' : ''} onClick={() => setCvMethod('upload')}>Upload files</button></div><form onSubmit={submitCV}>{cvMethod === 'paste' ? <><label>Candidate name<input value={cvName} onChange={e => setCvName(e.target.value)} placeholder="e.g. Maya Shah" required /></label><label>CV text<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste the CV text here…" rows={8} required /></label></> : <label className="file-drop"><Upload size={22} /><strong>{cvFiles.length ? `${cvFiles.length} file${cvFiles.length > 1 ? 's' : ''} selected` : 'Choose CV files'}</strong><span>PDF, DOCX or TXT · up to 4 MB each</span><input type="file" multiple accept=".pdf,.docx,.txt" disabled={uploadingCV} onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; if (files.length) uploadCVs(files) }} /></label>}{cvMethod === 'paste' ? <button className="button primary" type="submit">Add candidate <Plus size={17} /></button> : <p className="muted">{uploadingCV ? 'Uploading candidate CV…' : 'Choosing files uploads them automatically.'}</p>}</form></section></div>
-    <div className="section-heading"><div><span className="eyebrow">IN THIS WORKSPACE</span><h2>Current material</h2></div>{hasBundledSamples && <button className="text-button" onClick={removeBundledSamples}>Remove bundled samples</button>}</div><div className="material-grid"><section className="panel material-panel"><h3>Job descriptions <span>{workspace.jds.length}</span></h3><div className="select-list">{workspace.jds.map(jd => <button key={jd.id} className={`select-row ${jd.id === workspace.selected_jd_id ? 'selected' : ''}`} onClick={() => run(() => api(`/api/jds/${jd.id}/select`, { method: 'POST' }))}><FileText size={17} /><span>{jd.title}</span>{jd.id === workspace.selected_jd_id && <span className="active-tag">Active</span>}</button>)}</div>{!workspace.jds.length && <p className="material-empty">No job descriptions yet</p>}{activeJD && <div className="skill-editor"><div className="skill-editor-head"><strong>Skills used for matching</strong><button className="text-button" onClick={() => setEditing(!editing)}>{editing ? 'Cancel' : 'Edit skills'}</button></div>{editing ? <div className="skill-edit-form"><label>Role title<input value={title} onChange={e => setTitle(e.target.value)} /></label><label>Required skills, comma separated<input value={required} onChange={e => setRequired(e.target.value)} /></label><label>Preferred skills, comma separated<input value={preferred} onChange={e => setPreferred(e.target.value)} /></label><button className="button primary" onClick={() => { run(() => api(`/api/jds/${activeJD.id}`, { method: 'PATCH', body: json({ title, required: parse(required), preferred: parse(preferred) }) }), 'Matching skills updated.'); setEditing(false) }}>Save skills</button></div> : <><p><b>Required</b> {activeJD.required.join(' · ') || 'None identified'}</p><p><b>Preferred</b> {activeJD.preferred.join(' · ') || 'None identified'}</p></>}</div>}</section><section className="panel material-panel"><h3>Candidate CVs <span>{workspace.candidates.length}</span></h3><div className="select-list">{workspace.candidates.map(candidate => <div className="select-row" key={candidate.id}><span className="small-avatar">{initials(candidate.name)}</span><span>{candidate.name}</span><button className="icon-button delete-button" aria-label={`Remove ${candidate.name}`} title={`Remove ${candidate.name}`} onClick={() => run(() => api(`/api/candidates/${candidate.id}`, { method: 'DELETE' }), `${candidate.name} removed.`)}><Trash2 size={16} /></button></div>)}</div>{!workspace.candidates.length && <p className="material-empty">No candidate CVs yet</p>}</section></div>
+      <section className="panel document-card"><div className="card-heading"><span className="card-icon sage"><Users size={21} /></span><div><h2>Candidate CV</h2><p>Add one or several candidates.</p></div></div><div className="segmented"><button className={cvMethod === 'paste' ? 'selected' : ''} onClick={() => setCvMethod('paste')}>Paste text</button><button className={cvMethod === 'upload' ? 'selected' : ''} onClick={() => setCvMethod('upload')}>Upload files</button></div><form onSubmit={submitCV}>{cvMethod === 'paste' ? <><label>Candidate name<input value={cvName} onChange={e => setCvName(e.target.value)} placeholder="e.g. Maya Shah" required /></label><label>CV text<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste the CV text here…" rows={8} required /></label></> : <label className="file-drop"><Upload size={22} /><strong>{cvFiles.length ? `${cvFiles.length} file${cvFiles.length > 1 ? 's' : ''} selected` : 'Choose CV files'}</strong><span>PDF, DOCX or TXT · up to 4 MB each</span><input type="file" multiple accept=".pdf,.docx,.txt" disabled={uploadingCV} onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; if (files.length) uploadCVs(files) }} /></label>}{cvMethod === 'paste' ? <button className="button primary" type="submit">Add candidate <Plus size={17} /></button> : <><p className="muted">{uploadingCV ? 'Uploading candidate CV…' : 'Choosing files uploads them automatically.'}</p>{cvFiles.length > 0 && !uploadingCV && <button className="button secondary" type="button" onClick={() => uploadCVs(cvFiles)}>Retry remaining files ({cvFiles.length})</button>}</>}</form></section></div>
+    <div className="section-heading"><div><span className="eyebrow">IN THIS WORKSPACE</span><h2>Current material</h2></div>{hasBundledSamples && <button className="text-button" onClick={removeBundledSamples}>Remove bundled samples</button>}</div><div className="material-grid"><section className="panel material-panel"><h3>Job descriptions <span>{workspace.jds.length}</span></h3><div className="select-list">{workspace.jds.map(jd => <div className="jd-list-row" key={jd.id}><button className={`select-row ${jd.id === workspace.selected_jd_id ? 'selected' : ''}`} onClick={() => run(() => api(`/api/jds/${jd.id}/select`, { method: 'POST' }))}><FileText size={17} /><span>{jd.title}</span>{jd.id === workspace.selected_jd_id && <span className="active-tag">Active</span>}</button><button className="icon-button delete-button" aria-label={`Delete ${jd.title}`} title={`Delete ${jd.title}`} onClick={() => deleteJD(jd)}><Trash2 size={16} /></button></div>)}</div>{!workspace.jds.length && <p className="material-empty">No job descriptions yet</p>}{(activeJD || (editing && editJD)) && <div className="skill-editor"><div className="skill-editor-head"><strong>{editing && editJD ? `Editing ${editJD.title}` : 'Skills used for matching'}</strong><button className="text-button" onClick={() => { if (!editing && activeJD) { setEditJD(activeJD); setEditVersion(workspaceRevision); setTitle(activeJD.title); setRequired(activeJD.required.join(', ')); setPreferred(activeJD.preferred.join(', ')) } setEditing(!editing) }}>{editing ? 'Cancel' : 'Edit skills'}</button></div>{editing ? <div className="skill-edit-form">{editJD && !workspace.jds.some(item => item.id === editJD.id) && <p className="form-error">This job was removed in another session. Copy your unsaved edits before closing.</p>}<label>Role title<input value={title} onChange={e => setTitle(e.target.value)} /></label><label>Required skills, comma separated<input value={required} onChange={e => setRequired(e.target.value)} /></label><label>Preferred skills, comma separated<input value={preferred} onChange={e => setPreferred(e.target.value)} /></label><button className="button primary" disabled={!editJD || !workspace.jds.some(item => item.id === editJD.id)} onClick={async () => { const saved = await run(() => api(`/api/jds/${editJD?.id}`, { method: 'PATCH', headers: versionHeader(editVersion), body: json({ title, required: parse(required), preferred: parse(preferred) }) }), 'Matching skills updated.'); if (saved) setEditing(false) }}>Save skills</button></div> : <><p><b>Required</b> {activeJD?.required.join(' · ') || 'None identified'}</p><p><b>Preferred</b> {activeJD?.preferred.join(' · ') || 'None identified'}</p></>}</div>}</section><section className="panel material-panel"><h3>Candidate CVs <span>{workspace.candidates.length}</span></h3><div className="select-list">{workspace.candidates.map(candidate => <div className="select-row" key={candidate.id}><span className="small-avatar">{initials(candidate.name)}</span><span>{candidate.name}</span><button className="icon-button delete-button" aria-label={`Remove ${candidate.name}`} title={`Remove ${candidate.name}`} onClick={() => run(() => api(`/api/candidates/${candidate.id}`, { method: 'DELETE' }), `${candidate.name} removed.`)}><Trash2 size={16} /></button></div>)}</div>{!workspace.candidates.length && <p className="material-empty">No candidate CVs yet</p>}</section></div>
     {activeJD && <section className="panel review-entry"><div><strong>{activeJD.needs_review ? 'Review skills to enable comparison' : 'Reviewed matching skills'}</strong><p>{activeJD.needs_review ? 'Check what the JD actually asks for before using a score.' : 'You can reanalyse the source document without replacing saved edits until you approve.'}</p></div><button className="button secondary" onClick={() => openReview(activeJD.id)}>{activeJD.needs_review ? 'Review skills' : 'Reanalyse skills'}</button></section>}
     {reviewId && <section className="panel review-panel" aria-label="Skill review">
       <div className="review-head"><div><span className="eyebrow">JOB DESCRIPTION REVIEW</span><h2>Review detected skills</h2><p>Keep only what matters for this role. Each automatic suggestion shows its source.</p></div><button className="icon-button" aria-label="Close skill review" onClick={() => { setReviewId(null); setPreview(null); setReviewItems([]) }}><X size={20} /></button></div>
@@ -250,27 +282,29 @@ function Compare({ activeJD, results, candidateCount, onCandidate, onDocuments }
   </>
 }
 
-function CandidateView({ analysis, stage, onBack, onDrafts, onSaveStatus }: { analysis: Analysis; stage?: { stage: string; assessment: string }; onBack: () => void; onDrafts: () => void; onSaveStatus: (candidateId: string, stage: string, assessment: string) => Promise<boolean> }) {
+function CandidateView({ analysis, stage, onBack, onDrafts, onSaveStatus }: { analysis: Analysis; stage?: { stage: string; assessment: string }; onBack: () => void; onDrafts: () => void; onSaveStatus: (candidateId: string, stage: string, assessment: string, revision?: number) => Promise<boolean> }) {
   const { candidate, jd, match, summary, questions } = analysis
   const skills = [...jd.required.map(skill => ({ skill, category: 'Required', found: match.matched_required.includes(skill) })), ...jd.preferred.map(skill => ({ skill, category: 'Preferred', found: match.matched_preferred.includes(skill) }))]
   return <><button className="back-link" onClick={onBack}><ArrowLeft size={17} /> Back to comparison</button><div className="page-heading candidate-heading"><div><span className="eyebrow">CANDIDATE REVIEW</span><h1>{candidate.name}</h1><p>{jd.title} · {scoreLabel(match.score)}</p></div><div className="heading-actions"><button className="button secondary" onClick={onDrafts}>Draft email</button></div></div>
     <div className="analysis-top"><section className="panel score-panel"><div><span className="eyebrow">ATS-STYLE JD ALIGNMENT</span><h2>{match.score}% alignment</h2><p>Based on skills and wording in the supplied documents.</p></div><ScoreDonut score={match.score} /></section><section className="panel breakdown-panel"><span className="eyebrow">SCORE BREAKDOWN</span><ScoreBar label="Required skills · 70% weight" value={match.required_percent} /><ScoreBar label="Preferred skills · 20% weight" value={match.preferred_percent} /><ScoreBar label="Wording similarity · 10% weight" value={match.similarity_percent} /></section></div>
-    <div className="analysis-grid"><section className="panel evidence-panel"><div className="section-heading compact"><div><span className="eyebrow">DOCUMENT EVIDENCE</span><h2>Skills against the role</h2></div></div><div className="table-wrap"><table><thead><tr><th>Skill</th><th>Type</th><th>CV evidence</th></tr></thead><tbody>{skills.map(item => <tr key={item.skill}><td><strong>{item.skill}</strong></td><td>{item.category}</td><td>{item.found ? <><span className="evidence-status found"><Check size={14} /> Found</span><p className="evidence-quote">“{match.evidence[item.skill]?.text}” <small>{match.evidence[item.skill]?.location}</small></p></> : <span className="evidence-status gap">No evidence found</span>}</td></tr>)}</tbody></table></div></section><aside className="analysis-side"><section className="panel summary-panel"><span className="eyebrow">CANDIDATE SUMMARY</span><h3>At a glance</h3><p>{summary}</p></section><section className="panel questions-panel"><span className="eyebrow">INTERVIEW PREPARATION</span><h3>Questions to ask</h3><ol>{questions.map(question => <li key={question}>{question}</li>)}</ol></section><RecruitmentStatus record={stage} onSave={(newStage, assessment) => onSaveStatus(candidate.id, newStage, assessment)} /></aside></div>
+    <div className="analysis-grid"><section className="panel evidence-panel"><div className="section-heading compact"><div><span className="eyebrow">DOCUMENT EVIDENCE</span><h2>Skills against the role</h2></div></div><div className="table-wrap"><table><thead><tr><th>Skill</th><th>Type</th><th>CV evidence</th></tr></thead><tbody>{skills.map(item => <tr key={item.skill}><td><strong>{item.skill}</strong></td><td>{item.category}</td><td>{item.found ? <><span className="evidence-status found"><Check size={14} /> Found</span><p className="evidence-quote">“{match.evidence[item.skill]?.text}” <small>{match.evidence[item.skill]?.location}</small></p></> : <span className="evidence-status gap">No evidence found</span>}</td></tr>)}</tbody></table></div></section><aside className="analysis-side"><section className="panel summary-panel"><span className="eyebrow">CANDIDATE SUMMARY</span><h3>At a glance</h3><p>{summary}</p></section><section className="panel questions-panel"><span className="eyebrow">INTERVIEW PREPARATION</span><h3>Questions to ask</h3><ol>{questions.map(question => <li key={question}>{question}</li>)}</ol></section><RecruitmentStatus record={stage} onSave={(newStage, assessment, revision) => onSaveStatus(candidate.id, newStage, assessment, revision)} /></aside></div>
   </>
 }
 
-function RecruitmentStatus({ record, onSave }: { record?: { stage: string; assessment: string }; onSave: (stage: string, assessment: string) => Promise<boolean> }) {
+function RecruitmentStatus({ record, onSave }: { record?: { stage: string; assessment: string }; onSave: (stage: string, assessment: string, revision?: number) => Promise<boolean> }) {
+  const [statusVersion, setStatusVersion] = useState<number | undefined>(workspaceRevision)
   const [stage, setStage] = useState(record?.stage || '')
   const [assessment, setAssessment] = useState(record?.assessment || '')
-  useEffect(() => { setStage(record?.stage || ''); setAssessment(record?.assessment || '') }, [record?.stage, record?.assessment])
+  const [dirty, setDirty] = useState(false)
+  useEffect(() => { if (!dirty) { setStage(record?.stage || ''); setAssessment(record?.assessment || ''); setStatusVersion(workspaceRevision) } }, [record?.stage, record?.assessment, dirty])
   return <section className="panel status-panel">
     <span className="eyebrow">RECRUITMENT DATA</span>
     <h3>Recruitment status</h3>
     <p className="muted">{record ? `Current stage: ${record.stage}` : 'No status recorded'}</p>
     {record?.assessment && <p className="status-assessment">{record.assessment}</p>}
-    <label>Stage<select value={stage} onChange={event => setStage(event.target.value)}><option value="">Choose a stage</option><option>Application review</option><option>Recruiter screen</option><option>Technical interview</option><option>Assessment</option><option>Offer</option><option>Closed</option></select></label>
-    <label>Assessment note<input value={assessment} onChange={event => setAssessment(event.target.value)} maxLength={500} placeholder="Optional" /></label>
-    <button className="button secondary full" disabled={!stage} onClick={() => onSave(stage, assessment)}>Save status</button>
+    <label>Stage<select value={stage} onChange={event => { setDirty(true); setStage(event.target.value) }}><option value="">Choose a stage</option><option>Application review</option><option>Recruiter screen</option><option>Technical interview</option><option>Assessment</option><option>Offer</option><option>Closed</option></select></label>
+    <label>Assessment note<input value={assessment} onChange={event => { setDirty(true); setAssessment(event.target.value) }} maxLength={500} placeholder="Optional" /></label>
+    <button className="button secondary full" disabled={!stage} onClick={async () => { if (await onSave(stage, assessment, statusVersion) && lastRefreshSucceeded) { setStatusVersion(workspaceRevision); setDirty(false) } }}>Save status</button>
   </section>
 }
 
@@ -281,10 +315,16 @@ function Drafts({ workspace, activeJD, run }: { workspace: Workspace; activeJD?:
   const [time, setTime] = useState('')
   const [link, setLink] = useState('')
   const [editing, setEditing] = useState<Record<string, string>>({})
+  const [draftVersions, setDraftVersions] = useState<Record<string, number | undefined>>({})
+  const [draftSnapshots, setDraftSnapshots] = useState<Record<string, Draft>>({})
   const [copied, setCopied] = useState<string | null>(null)
   async function generate(event: FormEvent) { event.preventDefault(); await run(() => api('/api/drafts/generate', { method: 'POST', body: json({ candidate_id: candidateId, kind, date, time, link }) }), 'Draft created. Review it before sending.') }
+  async function saveDraft(draft: Draft) {
+    const saved = await run(() => api(`/api/drafts/${draft.id}`, { method: 'PATCH', headers: versionHeader(draftVersions[draft.id] ?? workspaceRevision), body: json({ text: editing[draft.id] ?? draft.text }) }), 'Draft saved.')
+    if (saved && lastRefreshSucceeded) { setEditing(current => { const next = { ...current }; delete next[draft.id]; return next }); setDraftVersions(current => { const next = { ...current }; delete next[draft.id]; return next }); setDraftSnapshots(current => { const next = { ...current }; delete next[draft.id]; return next }) }
+  }
   async function copy(id: string, value: string) { await navigator.clipboard.writeText(value); setCopied(id); setTimeout(() => setCopied(null), 2200) }
-  return <><div className="page-heading"><div><span className="eyebrow">COMMUNICATION</span><h1>Email drafts</h1><p>Create a starting point, then make it yours.</p></div></div><div className="draft-layout"><section className="panel draft-form-panel"><span className="eyebrow">NEW DRAFT</span><h2>What would you like to write?</h2><form onSubmit={generate}><label>Candidate<select value={candidateId} onChange={e => setCandidateId(e.target.value)} required>{workspace.candidates.map(candidate => <option value={candidate.id} key={candidate.id}>{candidate.name}</option>)}</select></label><label>Message type<select value={kind} onChange={e => setKind(e.target.value)}><option value="invitation">Interview invitation</option><option value="assessment">Assessment instructions</option></select></label><div className="form-pair"><label>{kind === 'assessment' ? 'Deadline' : 'Interview date'}<input type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>Time<input type="time" value={time} onChange={e => setTime(e.target.value)} /></label></div><label>{kind === 'assessment' ? 'Assessment link' : 'Meeting link or location'}<input value={link} onChange={e => setLink(e.target.value)} placeholder={kind === 'assessment' ? 'https://…' : 'Video link or address'} /></label><button className="button primary full" disabled={!candidateId || !activeJD}>Create draft <ArrowRight size={17} /></button></form>{(!activeJD || !workspace.candidates.length) && <p className="material-empty">{!activeJD && !workspace.candidates.length ? "Add a job description and a CV before creating a draft." : !activeJD ? "Add a job description before creating a draft." : "Add a CV before creating a draft."}</p>}<small className="draft-hint">Drafts are prepared here only. Copy and send them from your own email.</small></section><section className="draft-output"><div className="section-heading compact"><div><span className="eyebrow">YOUR DRAFTS</span><h2>{workspace.drafts.length ? `${workspace.drafts.length} saved draft${workspace.drafts.length === 1 ? '' : 's'}` : 'No drafts yet'}</h2></div></div>{workspace.drafts.length ? [...workspace.drafts].reverse().map(draft => <article className="panel draft-card" key={draft.id}><div className="draft-card-head"><div><span className="eyebrow">{draft.kind === 'invitation' ? 'INTERVIEW INVITATION' : 'ASSESSMENT INSTRUCTIONS'}</span><h3>{draft.candidate_name}</h3><p>{draft.job_title}</p></div><button className="icon-button delete-button" aria-label={`Delete draft for ${draft.candidate_name}`} onClick={() => run(() => api(`/api/drafts/${draft.id}`, { method: 'DELETE' }), 'Draft deleted.')}><Trash2 size={17} /></button></div><textarea aria-label={`Email draft for ${draft.candidate_name}`} value={editing[draft.id] ?? draft.text} onChange={e => setEditing({ ...editing, [draft.id]: e.target.value })} rows={11} /><div className="draft-actions"><button className="button secondary" onClick={() => run(() => api(`/api/drafts/${draft.id}`, { method: 'PATCH', body: json({ text: editing[draft.id] ?? draft.text }) }), 'Draft saved.')}>Save edits</button><button className="button primary" onClick={() => copy(draft.id, editing[draft.id] ?? draft.text)}>{copied === draft.id ? 'Copied' : 'Copy text'}</button></div></article>) : <div className="panel empty-state">Select a candidate and create a draft to get started.</div>}</section></div></>
+  return <><div className="page-heading"><div><span className="eyebrow">COMMUNICATION</span><h1>Email drafts</h1><p>Create a starting point, then make it yours.</p></div></div><div className="draft-layout"><section className="panel draft-form-panel"><span className="eyebrow">NEW DRAFT</span><h2>What would you like to write?</h2><form onSubmit={generate}><label>Candidate<select value={candidateId} onChange={e => setCandidateId(e.target.value)} required>{workspace.candidates.map(candidate => <option value={candidate.id} key={candidate.id}>{candidate.name}</option>)}</select></label><label>Message type<select value={kind} onChange={e => setKind(e.target.value)}><option value="invitation">Interview invitation</option><option value="assessment">Assessment instructions</option></select></label><div className="form-pair"><label>{kind === 'assessment' ? 'Deadline' : 'Interview date'}<input type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>Time<input type="time" value={time} onChange={e => setTime(e.target.value)} /></label></div><label>{kind === 'assessment' ? 'Assessment link' : 'Meeting link or location'}<input value={link} onChange={e => setLink(e.target.value)} placeholder={kind === 'assessment' ? 'https://…' : 'Video link or address'} /></label><button className="button primary full" disabled={!candidateId || !activeJD}>Create draft <ArrowRight size={17} /></button></form>{(!activeJD || !workspace.candidates.length) && <p className="material-empty">{!activeJD && !workspace.candidates.length ? "Add a job description and a CV before creating a draft." : !activeJD ? "Add a job description before creating a draft." : "Add a CV before creating a draft."}</p>}<small className="draft-hint">Drafts are prepared here only. Copy and send them from your own email.</small></section><section className="draft-output"><div className="section-heading compact"><div><span className="eyebrow">YOUR DRAFTS</span><h2>{workspace.drafts.length ? `${workspace.drafts.length} saved draft${workspace.drafts.length === 1 ? '' : 's'}` : 'No drafts yet'}</h2></div></div>{(workspace.drafts.length || Object.keys(draftSnapshots).length) ? [...workspace.drafts, ...Object.values(draftSnapshots).filter(item => !workspace.drafts.some(draft => draft.id === item.id))].reverse().map(draft => <article className="panel draft-card" key={draft.id}><div className="draft-card-head"><div><span className="eyebrow">{draft.kind === 'invitation' ? 'INTERVIEW INVITATION' : 'ASSESSMENT INSTRUCTIONS'}</span><h3>{draft.candidate_name}</h3><p>{draft.job_title}</p></div><button className="icon-button delete-button" aria-label={`Delete draft for ${draft.candidate_name}`} onClick={() => { if (workspace.drafts.some(item => item.id === draft.id)) { run(() => api(`/api/drafts/${draft.id}`, { method: 'DELETE' }), 'Draft deleted.') } else if (window.confirm('Discard the unsaved draft text?')) { setEditing(current => { const next = { ...current }; delete next[draft.id]; return next }); setDraftVersions(current => { const next = { ...current }; delete next[draft.id]; return next }); setDraftSnapshots(current => { const next = { ...current }; delete next[draft.id]; return next }) } }}><Trash2 size={17} /></button></div>{!workspace.drafts.some(item => item.id === draft.id) && <p className="form-error">This draft is no longer available. Copy your unsaved text before leaving.</p>}<textarea aria-label={`Email draft for ${draft.candidate_name}`} value={editing[draft.id] ?? draft.text} onChange={e => { if (!(draft.id in editing)) { setDraftVersions(current => ({ ...current, [draft.id]: workspaceRevision })); setDraftSnapshots(current => ({ ...current, [draft.id]: draft })) } setEditing({ ...editing, [draft.id]: e.target.value }) }} rows={11} /><div className="draft-actions"><button className="button secondary" disabled={!workspace.drafts.some(item => item.id === draft.id)} onClick={() => saveDraft(draft)}>Save edits</button><button className="button primary" onClick={() => copy(draft.id, editing[draft.id] ?? draft.text)}>{copied === draft.id ? 'Copied' : 'Copy text'}</button></div></article>) : <div className="panel empty-state">Select a candidate and create a draft to get started.</div>}</section></div></>
 }
 
 function ChatDrawer({ workspace, initialCandidateId, onClose }: { workspace: Workspace | null; initialCandidateId?: string; onClose: () => void }) {

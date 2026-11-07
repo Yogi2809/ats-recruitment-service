@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, Up
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
 from .auth import AuthStore, User, WorkspaceRecord, create_auth_store
@@ -83,6 +84,11 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         user = store.from_token(request.cookies.get("roletrace_session"))
         if user is None:
             raise HTTPException(status_code=401, detail="Please log in.")
+        revision_header = request.headers.get("X-Workspace-Revision")
+        if revision_header is not None:
+            if not revision_header.isascii() or not revision_header.isdigit() or len(revision_header) > 12:
+                raise HTTPException(status_code=400, detail="Invalid workspace version.")
+            user._workspace_revision = int(revision_header)
         return user
 
     def workspace(user: User) -> Workspace:
@@ -104,13 +110,21 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             return current
 
     def save_workspace(user: User, current: Workspace) -> None:
+        previous_revision = current.revision
+        client_revision = getattr(user, "_workspace_revision", None)
+        if client_revision is not None and client_revision != previous_revision:
+            raise HTTPException(status_code=409, detail="Your workspace changed in another session. Refresh and try this action again.")
+        current.revision += 1
         with app.state.auth.session_factory() as session:
-            record = session.get(WorkspaceRecord, user.id)
-            if record is None:
-                record = WorkspaceRecord(user_id=user.id, payload=asdict(current))
-                session.add(record)
-            else:
-                record.payload = asdict(current)
+            result = session.execute(
+                update(WorkspaceRecord)
+                .where(WorkspaceRecord.user_id == user.id,
+                       func.coalesce(WorkspaceRecord.payload["revision"].as_integer(), 0) == previous_revision)
+                .values(payload=asdict(current))
+            )
+            if result.rowcount != 1:
+                session.rollback()
+                raise HTTPException(status_code=409, detail="Your workspace changed in another session. Refresh and try this action again.")
             session.commit()
 
     def get_candidate(current: Workspace, candidate_id: str) -> Candidate:
@@ -179,6 +193,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     def get_workspace(user: User = Depends(current_user)):
         current = workspace(user)
         return {
+            "revision": current.revision,
             "jds": [jd_response(item) for item in current.jds],
             "candidates": [candidate_response(item) for item in current.candidates],
             "selected_jd_id": current.selected_jd_id,
@@ -233,6 +248,16 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         current.selected_jd_id = jd_id
         save_workspace(user, current)
         return {"selected_jd_id": jd_id}
+
+    @app.delete("/api/jds/{jd_id}")
+    def remove_jd(jd_id: str, user: User = Depends(current_user)):
+        current = workspace(user)
+        get_jd(current, jd_id)
+        current.jds = [item for item in current.jds if item.id != jd_id]
+        if current.selected_jd_id == jd_id:
+            current.selected_jd_id = current.jds[0].id if current.jds else ""
+        save_workspace(user, current)
+        return {"ok": True}
 
     @app.patch("/api/jds/{jd_id}")
     def update_jd(jd_id: str, body: SkillsUpdate, user: User = Depends(current_user)):

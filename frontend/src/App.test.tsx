@@ -22,6 +22,104 @@ beforeEach(() => {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+test('a conflicting save keeps pasted text and asks the recruiter to reload', async () => {
+  let workspaceReads = 0
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) { workspaceReads++; return Response.json(sampleWorkspace) }
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/jds/paste')) return Response.json({ detail: 'Your workspace changed in another session. Refresh and try this action again.' }, { status: 409 })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Role title' }), { target: { value: 'New Role' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Job description' }), { target: { value: 'Required: SQL' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add job description' }))
+  expect(await screen.findByText(/Copy unsaved edits, reload the page/)).toBeTruthy()
+  expect(workspaceReads).toBe(1)
+  expect(screen.getByRole('textbox', { name: 'Job description' })).toHaveProperty('value', 'Required: SQL')
+})
+
+test('retrying a partial CV upload does not upload completed files twice', async () => {
+  const uploads: string[] = []
+  let failSecond = true
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(sampleWorkspace)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/candidates/upload')) {
+      const name = ((options?.body as FormData).get('file') as File).name
+      uploads.push(name)
+      if (name === 'second.txt' && failSecond) { failSecond = false; return Response.json({ detail: 'Your workspace changed in another session. Refresh and try this action again.' }, { status: 409 }) }
+      return Response.json({ id: name })
+    }
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Upload files' }))
+  const input = document.querySelector('.document-card input[multiple]') as HTMLInputElement
+  fireEvent.change(input, { target: { files: [new File(['a'], 'first.txt'), new File(['b'], 'second.txt')] } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry remaining files (1)' }))
+  await waitFor(() => expect(uploads).toEqual(['first.txt', 'second.txt', 'second.txt']))
+})
+
+test('a JD editor retains its starting version after another workspace refresh', async () => {
+  let revision = 3
+  let submittedVersion: string | null = null
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json({ ...sampleWorkspace, revision })
+    if (url.endsWith('/api/compare')) return Response.json({ jd: sampleWorkspace.jds[0], results: [] })
+    if (url.endsWith('/api/candidates/paste')) { revision = 4; return Response.json({ id: 'new' }) }
+    if (url.endsWith('/api/jds/data-engineer') && options?.method === 'PATCH') {
+      submittedVersion = new Headers(options.headers).get('X-Workspace-Revision')
+      return Response.json({ detail: 'Your workspace changed in another session. Refresh and try this action again.' }, { status: 409 })
+    }
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Edit skills' }))
+  fireEvent.change(screen.getByLabelText('Required skills, comma separated'), { target: { value: 'Python, SQL' } })
+  fireEvent.change(screen.getByLabelText('Candidate name'), { target: { value: 'Example' } })
+  fireEvent.change(screen.getByLabelText('CV text'), { target: { value: 'Python' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add candidate' }))
+  await screen.findByText('Candidate CV added.')
+  fireEvent.click(screen.getByRole('button', { name: 'Save skills' }))
+  await screen.findByText(/Copy unsaved edits/)
+  expect(submittedVersion).toBe('3')
+  expect(screen.getByLabelText('Required skills, comma separated')).toHaveProperty('value', 'Python, SQL')
+})
+
+test('a recruiter can confirm deletion of their active JD', async () => {
+  let current = { ...sampleWorkspace }
+  vi.stubGlobal('confirm', vi.fn(() => true))
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return Response.json({ email: 'owner@example.test' })
+    if (url.endsWith('/api/jds/data-engineer') && options?.method === 'DELETE') {
+      current = { ...current, jds: [], selected_jd_id: '' }
+      return Response.json({ ok: true })
+    }
+    if (url.endsWith('/api/workspace')) return Response.json(current)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: current.jds[0] || null, results: [] })
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Delete Senior Data Engineer' }))
+  expect(await screen.findByText('No job descriptions yet')).toBeTruthy()
+})
+
 test('choosing a JD file saves it before comparison', async () => {
   let current = { jds: [] as typeof sampleWorkspace.jds, candidates: sampleWorkspace.candidates, selected_jd_id: '', recruitment: [], drafts: [] }
   const upload = vi.fn()
@@ -79,6 +177,7 @@ test('unreviewed JD offers skill review before showing a comparison', async () =
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
   fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  expect(await screen.findByText('Review JD skills')).toBeTruthy()
   fireEvent.click(await screen.findByRole('button', { name: 'Compare candidates' }))
   expect(screen.getByText(/Review this job description's skills before comparing candidates/)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Manage documents' }))

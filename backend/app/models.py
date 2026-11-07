@@ -51,6 +51,7 @@ class Workspace:
     selected_jd_id: str
     recruitment: list[dict[str, str]] = field(default_factory=list)
     drafts: list[dict[str, str]] = field(default_factory=list)
+    revision: int = 0
 
     def active_jd(self) -> JobDescription:
         return next(jd for jd in self.jds if jd.id == self.selected_jd_id)
@@ -68,4 +69,4 @@ def workspace_from_dict(data: dict) -> Workspace:
         Candidate(item["id"], item["name"], [Evidence(**evidence) for evidence in item["evidence"]])
         for item in data["candidates"]
     ]
-    return Workspace(jds, candidates, data["selected_jd_id"], data.get("recruitment", []), data.get("drafts", []))
+    return Workspace(jds, candidates, data["selected_jd_id"], data.get("recruitment", []), data.get("drafts", []), data.get("revision", 0))
