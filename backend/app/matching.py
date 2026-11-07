@@ -62,8 +62,17 @@ def _similarity(jd_text: str, cv_text: str) -> int:
 def rank(jd: JobDescription, candidates: list[Candidate]) -> list[MatchResult]:
     jd_text = " ".join(e.text for e in jd.evidence)
     results = []
+    alternatives = {
+        item.get("label"): item.get("options", [])
+        for item in jd.reviewed_requirements
+        if item.get("kind") == "skill" and len(item.get("options", [])) > 1
+    }
     for candidate in candidates:
-        hits = {skill: find_skill(skill, candidate.evidence) for skill in jd.required + jd.preferred}
+        hits = {
+            skill: next((hit for option in alternatives.get(skill, [skill])
+                         if (hit := find_skill(option, candidate.evidence)) is not None), None)
+            for skill in jd.required + jd.preferred
+        }
         matched_required = [skill for skill in jd.required if hits[skill]]
         matched_preferred = [skill for skill in jd.preferred if hits[skill]]
         required = round(100 * len(matched_required) / len(jd.required)) if jd.required else 0

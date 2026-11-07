@@ -17,6 +17,16 @@ def register(client, email):
     assert response.status_code == 201
 
 
+def review_jd(client, jd_id):
+    preview = client.post(f"/api/jds/{jd_id}/skills/preview", json={}).json()
+    result = client.put(f"/api/jds/{jd_id}/skills", json={
+        "selected_role": preview["selected_role"],
+        "requirements": [item for item in preview["suggestions"] if item["kind"] == "skill"],
+    })
+    assert result.status_code == 200
+    return result.json()
+
+
 def pdf_with(text):
     output = BytesIO()
     page = canvas.Canvas(output)
@@ -43,7 +53,7 @@ def test_recruiter_workflow_and_account_boundaries(tmp_path):
 
         jd = alice.post("/api/jds/paste", json={"title": "Data Engineer", "text": "Required: Python, SQL, Airflow. Preferred: AWS."})
         assert jd.status_code == 201
-        assert jd.json()["required"] == ["Python", "SQL", "Airflow"]
+        assert review_jd(alice, jd.json()["id"])["required"] == ["Python", "SQL", "Airflow"]
         cv = alice.post("/api/candidates/upload", files={"file": ("Maya_Test.docx", docx_with("Built Python and SQL pipelines using Airflow and AWS."))})
         assert cv.status_code == 201
         assert cv.json()["name"] == "Maya Test"
@@ -121,6 +131,7 @@ def test_large_cv_keeps_recruiter_responses_compact_and_grounded(tmp_path):
         register(client, "large-cv@example.test")
         jd = client.post("/api/jds/paste", json={"title": "Engineer", "text": "Required: Python, SQL, Airflow."})
         assert jd.status_code == 201
+        review_jd(client, jd.json()["id"])
         large_text = "Background: " + "x" * 400_000 + " Built Python and SQL pipelines with Airflow."
         candidate = client.post("/api/candidates/paste", json={"name": "Long CV", "text": large_text})
         assert candidate.status_code == 201

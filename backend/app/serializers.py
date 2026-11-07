@@ -24,6 +24,10 @@ def jd_response(jd: JobDescription, include_evidence: bool = False) -> dict:
         "title": jd.title,
         "required": jd.required,
         "preferred": jd.preferred,
+        "needs_review": jd.reviewed_at is None,
+        "selected_role": jd.selected_role,
+        "extractor_version": jd.extractor_version,
+        "reviewed_requirements": jd.reviewed_requirements,
         "evidence": [evidence_excerpt(item) for item in jd.evidence[:20]] if include_evidence else [],
     }
 

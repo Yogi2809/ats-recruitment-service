@@ -29,6 +29,14 @@ def test_frontend_required_and_preferred_sections():
     assert found["DOM Manipulation"] == "preferred"
 
 
+def test_required_and_preferred_cues_can_share_one_line():
+    found = labels("Data Engineer\nRequired skills: Python, SQL, and data pipelines. Preferred: AWS.")
+    assert found["Python"] == "required"
+    assert found["SQL"] == "required"
+    assert found["Data Pipelines"] == "required"
+    assert found["AWS"] == "preferred"
+
+
 def test_plus_cue_overrides_general_skillset_heading():
     found = labels(
         "Data Scientist\nSkillsets:\nExpert on R.\nKnowing Python is a plus.\n"

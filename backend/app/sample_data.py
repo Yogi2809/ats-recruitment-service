@@ -13,6 +13,7 @@ def sample_workspace() -> Workspace:
                 "Senior Data Engineer\nRequired: Python, SQL, Airflow, data pipelines. "
                 "Build reliable batch and streaming data workflows.\nPreferred: AWS cloud experience."
             ),
+            reviewed_at="synthetic-sample",
         ),
         JobDescription(
             "fullstack",
@@ -23,6 +24,7 @@ def sample_workspace() -> Workspace:
                 "Full Stack Engineer\nRequired: React, TypeScript, FastAPI, PostgreSQL. "
                 "Deliver accessible web applications and APIs.\nPreferred: Docker."
             ),
+            reviewed_at="synthetic-sample",
         ),
     ]
     candidates = [

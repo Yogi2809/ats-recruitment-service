@@ -1,7 +1,7 @@
-from dataclasses import asdict, replace
+from dataclasses import asdict
+from datetime import datetime, timezone
 import os
 from pathlib import Path
-import re
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
@@ -13,9 +13,10 @@ from sqlalchemy.exc import IntegrityError
 from .auth import AuthStore, User, WorkspaceRecord, create_auth_store
 from .assistant import answer, generate_draft, generate_questions, generate_summary
 from .documents import extract_document, extract_paste
-from .matching import ALIASES, find_skill, rank
+from .matching import rank
 from .models import Candidate, JobDescription, Workspace, workspace_from_dict
 from .serializers import candidate_response, jd_response, match_response
+from .skill_extraction import analyze_jd
 
 
 class Credentials(BaseModel):
@@ -40,6 +41,15 @@ class SkillsUpdate(BaseModel):
     title: str
     required: list[str]
     preferred: list[str]
+
+
+class SkillsPreview(BaseModel):
+    selected_role: str | None = None
+
+
+class SkillsSave(BaseModel):
+    selected_role: str | None = None
+    requirements: list[dict]
 
 
 class DraftRequest(BaseModel):
@@ -121,28 +131,6 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             raise HTTPException(status_code=409, detail="Add a job description before using this feature.")
         return jd
 
-    def inferred_skills(evidence) -> tuple[list[str], list[str]]:
-        required, preferred = [], []
-        section = "required"
-        heading = re.compile(r"\b(required|preferred)(?:\s+(?:skills|qualifications|experience))?\s*:", re.I)
-
-        def add_skills(chunk, text: str, target: list[str]) -> None:
-            if not text.strip():
-                return
-            segment = replace(chunk, text=text)
-            for skill in ALIASES:
-                if find_skill(skill, [segment]) and skill not in target:
-                    target.append(skill)
-
-        for chunk in evidence:
-            start = 0
-            for marker in heading.finditer(chunk.text):
-                add_skills(chunk, chunk.text[start:marker.start()], preferred if section == "preferred" else required)
-                section = marker.group(1).lower()
-                start = marker.end()
-            add_skills(chunk, chunk.text[start:], preferred if section == "preferred" else required)
-        return required, preferred
-
     def set_cookie(response: Response, store: AuthStore, user: User, remember: bool) -> None:
         response.set_cookie(
             "roletrace_session",
@@ -219,8 +207,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             evidence = extract_paste(body.text)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        inferred_required, inferred_preferred = inferred_skills(evidence)
-        jd = JobDescription(uuid4().hex, body.title.strip() or "Untitled job", body.required if body.required is not None else inferred_required, body.preferred if body.preferred is not None else inferred_preferred, evidence)
+        jd = JobDescription(uuid4().hex, body.title.strip() or "Untitled job", body.required or [], body.preferred or [], evidence, extractor_version="2")
         current.jds.append(jd)
         current.selected_jd_id = jd.id
         save_workspace(user, current)
@@ -233,8 +220,7 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
             evidence = extract_document(file.filename or "job.txt", await file.read())
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        required, preferred = inferred_skills(evidence)
-        jd = JobDescription(uuid4().hex, Path(file.filename or "Job").stem.replace("_", " "), required, preferred, evidence)
+        jd = JobDescription(uuid4().hex, Path(file.filename or "Job").stem.replace("_", " "), [], [], evidence, extractor_version="2")
         current.jds.append(jd)
         current.selected_jd_id = jd.id
         save_workspace(user, current)
@@ -255,6 +241,74 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
         jd.title = body.title.strip() or jd.title
         jd.required = [item.strip() for item in body.required if item.strip()]
         jd.preferred = [item.strip() for item in body.preferred if item.strip()]
+        jd.reviewed_requirements = [
+            {"id": uuid4().hex, "label": label, "kind": "skill", "category": category,
+             "options": [label], "source_id": "", "source_location": "", "source_quote": "",
+             "source_section": "", "origin": "manual"}
+            for category, labels in (("required", jd.required), ("preferred", jd.preferred))
+            for label in labels
+        ]
+        jd.reviewed_at = datetime.now(timezone.utc).isoformat()
+        jd.extractor_version = "2"
+        save_workspace(user, current)
+        return jd_response(jd, include_evidence=True)
+
+    @app.post("/api/jds/{jd_id}/skills/preview")
+    def preview_jd_skills(jd_id: str, body: SkillsPreview, user: User = Depends(current_user)):
+        current = workspace(user)
+        jd = get_jd(current, jd_id)
+        try:
+            preview = analyze_jd(jd.evidence, body.selected_role)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {**preview, "current_required": jd.required, "current_preferred": jd.preferred,
+                "needs_review": jd.reviewed_at is None}
+
+    @app.put("/api/jds/{jd_id}/skills")
+    def save_jd_skills(jd_id: str, body: SkillsSave, user: User = Depends(current_user)):
+        current = workspace(user)
+        jd = get_jd(current, jd_id)
+        try:
+            preview = analyze_jd(jd.evidence, body.selected_role)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if preview["roles"] and preview["selected_role"] is None:
+            raise HTTPException(status_code=422, detail="Choose one role before saving skills.")
+        if len(body.requirements) > 100:
+            raise HTTPException(status_code=422, detail="Use no more than 100 requirements.")
+        offered = {item["id"]: item for item in preview["suggestions"]}
+        approved = []
+        used_labels = set()
+        for raw in body.requirements:
+            if not isinstance(raw, dict):
+                raise HTTPException(status_code=422, detail="Invalid skill entry.")
+            label = raw.get("label")
+            category = raw.get("category")
+            kind = raw.get("kind")
+            origin = raw.get("origin")
+            options = raw.get("options")
+            if not isinstance(label, str) or not label.strip() or len(label.strip()) > 100 or category not in {"required", "preferred", "unspecified"} or kind not in {"skill", "other_requirement"} or origin not in {"suggested", "manual"} or not isinstance(options, list) or not 1 <= len(options) <= 8 or any(not isinstance(value, str) or not value.strip() or len(value) > 100 for value in options):
+                raise HTTPException(status_code=422, detail="Check each skill label, category, and alternative.")
+            label = label.strip()
+            if label.casefold() in used_labels:
+                raise HTTPException(status_code=422, detail="Remove duplicate skills before saving.")
+            used_labels.add(label.casefold())
+            if origin == "suggested":
+                source = offered.get(raw.get("id"))
+                if source is None or label != source["label"] or options != source["options"] or raw.get("source_id") != source["source_id"]:
+                    raise HTTPException(status_code=422, detail="A suggested skill no longer matches this JD. Reanalyse it or mark your edit as manual.")
+                approved.append({**source, "category": category, "kind": kind})
+            else:
+                approved.append({"id": uuid4().hex, "label": label, "kind": kind, "category": category,
+                                 "options": [value.strip() for value in options], "source_id": "",
+                                 "source_location": "", "source_quote": "", "source_section": "",
+                                 "origin": "manual"})
+        jd.reviewed_requirements = approved
+        jd.required = [item["label"] for item in approved if item["kind"] == "skill" and item["category"] == "required"]
+        jd.preferred = [item["label"] for item in approved if item["kind"] == "skill" and item["category"] == "preferred"]
+        jd.selected_role = preview["selected_role"]
+        jd.extractor_version = "2"
+        jd.reviewed_at = datetime.now(timezone.utc).isoformat()
         save_workspace(user, current)
         return jd_response(jd, include_evidence=True)
 
@@ -312,13 +366,16 @@ def create_app(database_url: str | None = None, secret_key: str | None = None) -
     def compare(user: User = Depends(current_user)):
         current = workspace(user)
         jd = next((item for item in current.jds if item.id == current.selected_jd_id), None)
-        return {"jd": jd_response(jd) if jd else None, "results": [match_response(item) for item in rank(jd, current.candidates)] if jd else []}
+        can_compare = jd is not None and jd.reviewed_at is not None and bool(jd.required or jd.preferred)
+        return {"jd": jd_response(jd) if jd else None, "results": [match_response(item) for item in rank(jd, current.candidates)] if can_compare else []}
 
     @app.get("/api/candidates/{candidate_id}/analysis")
     def candidate_analysis(candidate_id: str, user: User = Depends(current_user)):
         current = workspace(user)
         candidate = get_candidate(current, candidate_id)
         jd = active_jd(current)
+        if jd.reviewed_at is None or not (jd.required or jd.preferred):
+            raise HTTPException(status_code=409, detail="Review this job description's skills before comparing candidates.")
         match = next(item for item in rank(jd, current.candidates) if item.candidate_id == candidate_id)
         return {"candidate": candidate_response(candidate, include_evidence=True), "jd": jd_response(jd, include_evidence=True), "match": match_response(match), "summary": generate_summary(jd, candidate, match), "questions": generate_questions(jd, candidate, match)}
 

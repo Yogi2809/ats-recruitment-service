@@ -16,6 +16,10 @@ class JobDescription:
     required: list[str]
     preferred: list[str]
     evidence: list[Evidence]
+    selected_role: str | None = None
+    extractor_version: str | None = None
+    reviewed_at: str | None = None
+    reviewed_requirements: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -55,7 +59,9 @@ class Workspace:
 def workspace_from_dict(data: dict) -> Workspace:
     jds = [
         JobDescription(item["id"], item["title"], item["required"], item["preferred"],
-                       [Evidence(**evidence) for evidence in item["evidence"]])
+                       [Evidence(**evidence) for evidence in item["evidence"]],
+                       item.get("selected_role"), item.get("extractor_version"),
+                       item.get("reviewed_at"), item.get("reviewed_requirements", []))
         for item in data["jds"]
     ]
     candidates = [

@@ -15,6 +15,16 @@ def register(client, email):
     assert result.status_code == 201
 
 
+def review_jd(client, jd_id):
+    preview = client.post(f"/api/jds/{jd_id}/skills/preview", json={}).json()
+    result = client.put(f"/api/jds/{jd_id}/skills", json={
+        "selected_role": preview["selected_role"],
+        "requirements": [item for item in preview["suggestions"] if item["kind"] == "skill"],
+    })
+    assert result.status_code == 200
+    return result.json()
+
+
 def test_workspace_and_comparison_require_login(tmp_path):
     with make_client(tmp_path) as client:
         assert client.get("/api/workspace").status_code == 401
@@ -50,6 +60,7 @@ def test_uploaded_material_completes_comparison_after_empty_start(tmp_path):
         candidate = client.post("/api/candidates/paste", json={"name": "Test Candidate", "text": "Built Python services with SQL."})
         jd = client.post("/api/jds/paste", json={"title": "Data role", "text": "Required: Python, SQL, Airflow."})
         assert jd.status_code == 201
+        review_jd(client, jd.json()["id"])
         comparison = client.get("/api/compare")
         assert comparison.status_code == 200
         assert comparison.json()["jd"]["title"] == "Data role"
@@ -88,8 +99,9 @@ def test_pasted_jd_separates_required_and_preferred_skills_on_one_line(tmp_path)
             "text": "Required skills: Python, SQL, and data pipelines. Preferred: AWS.",
         })
         assert added.status_code == 201
-        assert added.json()["required"] == ["Python", "SQL", "Data Pipelines"]
-        assert added.json()["preferred"] == ["AWS"]
+        reviewed = review_jd(client, added.json()["id"])
+        assert reviewed["required"] == ["Python", "SQL", "Data Pipelines"]
+        assert reviewed["preferred"] == ["AWS"]
 
 
 def test_first_workspace_requests_can_arrive_together(tmp_path, monkeypatch):
@@ -116,6 +128,7 @@ def test_chat_and_draft_work_without_api_key(tmp_path, monkeypatch):
         register(client, "demo@example.test")
         jd = client.post("/api/jds/paste", json={"title": "Data Engineer", "text": "Required: Python, SQL, Airflow."})
         assert jd.status_code == 201
+        review_jd(client, jd.json()["id"])
         candidate = client.post("/api/candidates/paste", json={"name": "Maya Test", "text": "Built Python and SQL pipelines using Airflow."})
         assert candidate.status_code == 201
         reply = client.post("/api/chat", json={"question": "Why is Maya ranked first?"})
@@ -159,6 +172,8 @@ def test_recruitment_stage_is_recorded_per_candidate_and_grounded_in_chat(tmp_pa
     with make_client(tmp_path) as alice:
         register(alice, "stage-alice@example.test")
         alice.post("/api/jds/paste", json={"title": "Engineer", "text": "Required: Python."})
+        jd_id = alice.get("/api/workspace").json()["selected_jd_id"]
+        review_jd(alice, jd_id)
         candidate = alice.post("/api/candidates/paste", json={"name": "Stage Candidate", "text": "Built Python services."}).json()
         before = alice.post("/api/chat", json={"question": "What stage is Stage Candidate at?"})
         assert before.status_code == 200
@@ -195,4 +210,5 @@ def test_qa_job_extracts_testing_skills_for_comparison(tmp_path):
         register(client, "qa-role@example.test")
         response = client.post("/api/jds/paste", json={"title": "QA Engineer", "text": "Required: manual testing, test cases, Selenium, API testing, and Jira."})
         assert response.status_code == 201
-        assert {"Manual Testing", "Test Cases", "Selenium", "API Testing", "Jira"}.issubset(set(response.json()["required"]))
+        reviewed = review_jd(client, response.json()["id"])
+        assert {"Manual Testing", "Test Cases", "Selenium", "API Testing", "Jira"}.issubset(set(reviewed["required"]))

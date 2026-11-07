@@ -74,6 +74,10 @@ def _fallback(question: str, workspace: Workspace) -> dict:
     if not workspace.jds:
         return {"text": "Add a job description to this workspace, then I can help compare candidates and prepare interviews.", "citations": []}
     jd = workspace.active_jd()
+    if jd.reviewed_at is None:
+        return {"text": "Review and save this job description's skills before I compare candidates or describe their alignment.", "citations": []}
+    if not jd.required and not jd.preferred:
+        return {"text": "Add at least one reviewed skill to this job description before comparing candidates.", "citations": []}
     matches = rank(jd, workspace.candidates)
     if not matches:
         return {"text": "Add a candidate CV, then I can answer questions about matches and interview preparation.", "citations": []}
@@ -110,7 +114,7 @@ def _fallback(question: str, workspace: Workspace) -> dict:
 
 def answer(question: str, workspace: Workspace, groq_client=None) -> dict:
     fallback = _fallback(question, workspace)
-    if not workspace.jds:
+    if not workspace.jds or workspace.active_jd().reviewed_at is None or not (workspace.active_jd().required or workspace.active_jd().preferred):
         return fallback
     if ("not established" in fallback["text"] or "not recorded" in fallback["text"]) and not fallback["citations"]:
         return fallback

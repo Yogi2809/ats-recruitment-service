@@ -84,7 +84,14 @@ def _lines(evidence: list[Evidence]) -> list[Line]:
         for raw in item.text.splitlines():
             cleaned = _clean(raw)
             if cleaned:
-                rows.append(Line(len(rows), cleaned, item))
+                breaks = [match.start() for match in re.finditer(
+                    r"\b(?:required(?:\s+skills)?|preferred)\s*:", cleaned, re.I
+                ) if match.start() > 0]
+                starts = [0, *breaks]
+                for start, end in zip(starts, [*breaks, len(cleaned)]):
+                    part = cleaned[start:end].strip(" .")
+                    if part:
+                        rows.append(Line(len(rows), part, item))
     return rows
 
 
