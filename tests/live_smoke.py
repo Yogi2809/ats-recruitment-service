@@ -20,7 +20,8 @@ from reportlab.pdfgen import canvas
 
 
 def request(base_url, cookies, method, path, *, body=None, upload=None):
-    command = ["curl", "-sS", "--max-time", "35", "-b", str(cookies), "-c", str(cookies), "-w", "\n%{http_code}", "-X", method]
+    extended = upload is not None or (body is not None and len(json.dumps(body)) > 100_000)
+    command = ["curl", "-sS", "--max-time", "90" if extended else "35", "-b", str(cookies), "-c", str(cookies), "-w", "\n%{http_code}", "-X", method]
     if body is not None:
         command += ["-H", "Content-Type: application/json", "--data-binary", json.dumps(body)]
     if upload is not None:
