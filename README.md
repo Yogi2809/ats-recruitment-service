@@ -32,7 +32,7 @@ For frontend development, run `npm run dev` in `frontend/` while the Python serv
 ## Five-minute demo
 
 1. Create an account. The workspace starts empty.
-2. Open **Documents**. Upload `sample_data/senior_data_engineer_jd.txt` and one or more CVs from `sample_data/`, or paste synthetic text into the separate JD and CV forms. Review the extracted required/preferred skills.
+2. Open **Documents**. Upload `sample_data/senior_data_engineer_jd.txt` and one or more CVs from `sample_data/`, or paste synthetic text into the separate JD and CV forms. **Review skills** opens after adding the JD. Check the source quotes, adjust required/preferred labels, and save before comparing.
 3. Open **Compare candidates**. Review the ranked cards, donut percentage, coverage bars, and the plain-language matching label.
 4. Click **View evidence and prepare** on Maya Shah. Inspect the skill table, source lines, summary, and role-specific interview questions. Save a recruitment stage and an optional assessment note.
 5. Click the floating chat icon in the bottom right. Try “Why is Maya a match?”, “Who has Airflow?”, “What should I ask Maya?”, and “What stage is Maya at?” Open the source excerpts beneath each answer.
@@ -43,9 +43,9 @@ Accounts created before the empty-workspace update may still contain the origina
 
 ## How matching works
 
-For each JD, the app detects a small catalog of skill names and aliases. The recruiter can edit the required and preferred skill lists before comparing. Each CV is checked for mentions of those skills, and the matching text is kept as evidence. The wording similarity is TF-IDF cosine similarity between the JD and CV text.
+For each JD, the app suggests skills from role sections using a shared term catalog and short phrases found in the document. Every automatic suggestion shows its source location and quote. A document with several roles requires a role choice. The recruiter can correct, remove, or add skills; comparison is unavailable until the reviewed list is saved. **Reanalyse skills** previews updated suggestions without replacing the accepted list until saved. Each CV is checked for mentions of approved skills, and the matching text is kept as evidence. The wording similarity is TF-IDF cosine similarity between the JD and CV text.
 
-The score is `70% × required coverage + 20% × preferred coverage + 10% × wording similarity`. If a JD has no required or preferred skills, its missing category's weight is redistributed among the remaining components. This is **RoleTrace's own comparison**, not an external ATS score. A skill absent from a CV is labeled **No evidence found**; it does not establish that the candidate lacks the skill. The score helps a recruiter decide what to inspect and ask, not whom to hire.
+The score is `70% × required coverage + 20% × preferred coverage + 10% × wording similarity`. If one skill category is empty, its weight is redistributed among the remaining components. If no approved required or preferred skills exist, no score is shown. An `A or B` requirement counts once and is supported by either option. This is **RoleTrace's own comparison**, not an external ATS score. A skill absent from a CV is labeled **No evidence found**; it does not establish that the candidate lacks the skill. The score helps a recruiter decide what to inspect and ask, not whom to hire.
 
 ## Chat and optional LLM
 
@@ -80,6 +80,7 @@ For a live deployment check, run `python tests/live_smoke.py https://roletrace.v
 - `backend/app/main.py`: API routes, account protection, and compiled frontend serving
 - `backend/app/auth.py`: account database, Argon2 passwords, signed cookies
 - `backend/app/documents.py`: PDF/DOCX/TXT extraction with page/line locations
+- `backend/app/skill_extraction.py`: evidence-backed JD requirement suggestions and role segmentation
 - `backend/app/matching.py`: aliases, score, ranking, and evidence
 - `backend/app/serializers.py`: compact, relevant API evidence excerpts
 - `backend/app/assistant.py`: summaries, interview questions, drafts, and chat

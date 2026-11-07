@@ -82,3 +82,57 @@ def test_multiple_roles_require_selection_and_do_not_mix_requirements():
     ra = analyze_jd(evidence, "RA")
     assert any("negotiation" in item["label"].lower() for item in ra["suggestions"])
     assert not any("car inspection" in item["label"].lower() for item in ra["suggestions"])
+
+
+def test_title_detection_ignores_prose_and_reporting_lines():
+    result = analyze_jd(extract_paste(
+        "PRODUCT MANAGER\nLeader: Executive Vice President of Operations and Travel Technology\n"
+        "The requirements must be met by an associate to perform the essential functions.\n"
+        "Required Skills & Qualifications:\nProduct roadmap and market research."
+    ))
+    assert result["roles"] == ["PRODUCT MANAGER"]
+    assert {"Product Roadmap", "Market Research"} <= {s["label"] for s in result["suggestions"]}
+
+
+def test_required_skills_and_qualifications_heading_and_experience_line():
+    found = labels(
+        "Backend Developer\nRequired Skills & Qualifications:\n"
+        "Experience with Node.js and REST API.\n"
+        "Experience with SQL and Python.\n"
+        "Nice-to-Have:\nKnowledge of Kafka."
+    )
+    assert all(found[s] == "required" for s in ["Node.js", "REST API", "SQL", "Python"])
+    assert found["Kafka"] == "preferred"
+
+
+def test_local_cue_does_not_make_previous_skill_required():
+    found = labels("Data Scientist\nSkillsets:\nExpert on R. (Excellent coding aptitude is required.)")
+    assert found["R"] == "unspecified"
+
+
+def test_generic_words_and_examples_are_not_independent_skills():
+    found = labels(
+        "React.JS Developer\nRequired:\nExperience with React and Web.\n"
+        "Experience with JavaScript and DOM manipulation.\n"
+        "Evaluation Engineer\nRequirements:\nExperience with engines (Hyundai, Toyota, BMW)."
+    , role="React.JS Developer")
+    assert "React" in found
+    assert "Web" not in found
+    assert "The" not in found
+
+
+def test_title_with_company_suffix_is_one_role():
+    result = analyze_jd(extract_paste(
+        "Data Scientist- Cars24.com (3-5 years)\nSkillsets:\nExperience with Python."
+    ))
+    assert result["roles"] == ["Data Scientist"]
+
+
+def test_repeated_skill_has_one_review_row_and_required_priority():
+    result = analyze_jd(extract_paste(
+        "QA Engineer\nPreferred:\nSelenium is a plus.\n"
+        "Requirements:\nSelenium and Python are required."
+    ))
+    selenium = [s for s in result["suggestions"] if s["label"] == "Selenium"]
+    assert len(selenium) == 1
+    assert selenium[0]["category"] == "required"

@@ -30,6 +30,7 @@ test('choosing a JD file saves it before comparison', async () => {
     if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
     if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'upload@example.test' })
     if (url.endsWith('/api/jds/upload')) { upload(); current = { ...current, jds: sampleWorkspace.jds, selected_jd_id: 'data-engineer' }; return Response.json(sampleWorkspace.jds[0]) }
+    if (url.endsWith('/api/jds/data-engineer/skills/preview')) return Response.json({ roles: ['Senior Data Engineer'], selected_role: 'Senior Data Engineer', suggestions: [], warnings: [], current_required: [], current_preferred: [], needs_review: true })
     if (url.endsWith('/api/workspace')) return Response.json(current)
     if (url.endsWith('/api/compare')) return Response.json({ jd: current.jds[0] || null, results: [] })
     return Response.json({ ok: true })
@@ -49,6 +50,43 @@ test('choosing a JD file saves it before comparison', async () => {
   fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [new File(['Required: Python'], 'role.pdf', { type: 'application/pdf' })] } })
   await waitFor(() => expect(upload).toHaveBeenCalledTimes(1))
   await screen.findByRole('heading', { name: 'Job descriptions 1' })
+})
+
+test('unreviewed JD offers skill review before showing a comparison', async () => {
+  let pending = { ...sampleWorkspace, jds: [{ ...sampleWorkspace.jds[0], needs_review: true }] }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/api/auth/me')) return new Response('{}', { status: 401 })
+    if (url.endsWith('/api/auth/register')) return Response.json({ id: 1, email: 'review@example.test' })
+    if (url.endsWith('/api/workspace')) return Response.json(pending)
+    if (url.endsWith('/api/compare')) return Response.json({ jd: pending.jds[0], results: [] })
+    if (url.endsWith('/api/jds/data-engineer/skills/preview')) return Response.json({
+      roles: ['Senior Data Engineer'], selected_role: 'Senior Data Engineer', warnings: [],
+      current_required: ['Python'], current_preferred: [], needs_review: true,
+      suggestions: [{ id: 'one', label: 'Python', kind: 'skill', category: 'required', options: ['Python'], source_id: 'source', source_location: 'line 1', source_quote: 'Required: Python', source_section: 'required', origin: 'suggested' }],
+    })
+    if (url.endsWith('/api/jds/data-engineer/skills') && options?.method === 'PUT') {
+      pending = { ...pending, jds: [{ ...pending.jds[0], needs_review: false }] }
+      return Response.json(pending.jds[0])
+    }
+    return Response.json({ ok: true })
+  }))
+  const { default: App } = await import('./App')
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Log in' })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'review@example.test' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-demo-password' } })
+  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'long-demo-password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Compare candidates' }))
+  expect(screen.getByText(/Review this job description's skills before comparing candidates/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Manage documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review skills' }))
+  expect(await screen.findByRole('heading', { name: 'Review detected skills' })).toBeTruthy()
+  expect(await screen.findByText('line 1: Required: Python')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Save reviewed skills' }))
+  expect(await screen.findByRole('button', { name: 'Reanalyse skills' })).toBeTruthy()
 })
 
 test('login is minimal and create-account navigation works', async () => {

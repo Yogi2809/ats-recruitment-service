@@ -2,7 +2,7 @@
 
 **Date:** 7 November 2026
 
-**Status:** Design approved in chat; written specification awaiting review
+**Status:** Reviewed against implementation and fourteen supplied JDs; implemented with recruiter approval as the score gate
 **Scope:** Replace the current JD skill inference and add a recruiter review step before those skills influence comparison. CV upload, authentication, email drafts, and chat remain in their current flows.
 
 ## Problem and evidence
@@ -33,7 +33,7 @@ The pipeline has separate, testable units:
 2. **Document and role segmentation.** Detect headings and spans for role title(s), company background, responsibilities, qualifications, requirements, preferences, benefits, and boilerplate. Repeated headers/footers and employer technology overviews do not generate requirements. When clear multiple role headings occur, offer those roles and do not combine their spans. If segmentation is uncertain, show the ambiguity and require review; do not silently combine roles.
 3. **Candidate phrases.** Within the selected role's relevant sections, identify explicit tools and named methods from a shared vocabulary *and* phrases from bullet and cue patterns such as “experience with X,” “knowledge of X,” “ability to X,” and “X skills.” Split coordinated lists and slash-separated tools, but preserve meaningful phrases such as “hazard identification,” “link building,” and “test plan design.” Do not invent terms that have no supporting span. Treat responsibilities as suggested capabilities, not automatically as mandatory requirements.
 4. **Requirement language.** Classify local cues including `must`, `required`, `essential`, `preferred`, `desired`, `nice-to-have`, `plus`, and `added advantage`. A cue can apply to a heading, bullet, or clause. Use `unspecified` when language is not explicit. Retain `A or B or C` as one alternative group so that matching any option satisfies one criterion. A comma list without `or` remains separate items. Education, years of experience, licenses, travel, and schedule are recorded as non-skill requirements for review but excluded from the skill score.
-5. **Normalization and evidence.** Map recognized aliases to a canonical label; preserve novel phrases as written. Each suggestion includes its category, original phrase, short source quote, location, source section, and whether it is an alternative group. Deduplicate within a role, without merging distinct skills merely because their words overlap.
+5. **Normalization and evidence.** Map recognized aliases to a canonical label; preserve novel phrases as written. Each suggestion includes its category, short source quote, location, source section, and whether it is an alternative group. Deduplicate exact labels within a role, without merging distinct skills merely because their words overlap. The current record retains the strongest category and one supporting quote when a term occurs more than once; collecting all supporting spans is future work.
 
 This first version uses transparent Python parsing and a manageable shared alias catalog. It aims for useful suggestions and honest uncertainty, not perfect autonomous extraction of every skill in every occupation.
 

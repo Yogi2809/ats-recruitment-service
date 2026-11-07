@@ -53,6 +53,19 @@ def expect(response, status, label):
     return data
 
 
+def review_jd(base_url, cookie, jd):
+    preview = expect(request(base_url, cookie, "POST", f"/api/jds/{jd['id']}/skills/preview", body={}), 200, "preview JD skills")
+    role = preview["selected_role"]
+    if len(preview["roles"]) > 1:
+        role = preview["roles"][0]
+        preview = expect(request(base_url, cookie, "POST", f"/api/jds/{jd['id']}/skills/preview", body={"selected_role": role}), 200, "select JD role")
+    requirements = [item for item in preview["suggestions"] if item["kind"] == "skill" and item["category"] in {"required", "preferred"}]
+    assert requirements, "synthetic JD should contain comparable skills"
+    saved = expect(request(base_url, cookie, "PUT", f"/api/jds/{jd['id']}/skills", body={"selected_role": role, "requirements": requirements}), 200, "save reviewed skills")
+    assert not saved["needs_review"]
+    return saved
+
+
 def make_pdf(path):
     output = BytesIO()
     pdf = canvas.Canvas(output)
@@ -100,8 +113,11 @@ def run(base_url):
 
         sample_dir = Path(__file__).resolve().parents[1] / "sample_data"
         jd = expect(request(base_url, alice_cookie, "POST", "/api/jds/upload", upload=sample_dir / "senior_data_engineer_jd.txt"), 201, "upload JD")
+        assert jd["needs_review"]
         maya = expect(request(base_url, alice_cookie, "POST", "/api/candidates/upload", upload=sample_dir / "maya_shah_cv.txt"), 201, "upload TXT CV")
         arjun = expect(request(base_url, alice_cookie, "POST", "/api/candidates/upload", upload=sample_dir / "arjun_rao_cv.txt"), 201, "upload second TXT CV")
+        assert expect(request(base_url, alice_cookie, "GET", "/api/compare"), 200, "unreviewed comparison")["results"] == []
+        review_jd(base_url, alice_cookie, jd)
         comparison = expect(request(base_url, alice_cookie, "GET", "/api/compare"), 200, "rank candidates")
         assert comparison["jd"]["id"] == jd["id"]
         assert len(comparison["results"]) == 2
@@ -143,7 +159,8 @@ def run(base_url):
         make_pdf(pdf_path)
         bob_jd = expect(request(base_url, bob_cookie, "POST", "/api/jds/upload", upload=docx_path), 201, "DOCX JD")
         bob_cv = expect(request(base_url, bob_cookie, "POST", "/api/candidates/upload", upload=pdf_path), 201, "PDF CV")
-        assert bob_jd["required"] and bob_cv["evidence"][0]["location"] == "page 1"
+        assert bob_jd["needs_review"] and bob_cv["evidence"][0]["location"] == "page 1"
+        review_jd(base_url, bob_cookie, bob_jd)
         assert len(expect(request(base_url, bob_cookie, "GET", "/api/compare"), 200, "Bob comparison")["results"]) == 1
         assert len(expect(request(base_url, alice_cookie, "GET", "/api/compare"), 200, "Alice comparison")["results"]) == 2
         checks.append("DOCX and PDF extraction and isolated comparison")

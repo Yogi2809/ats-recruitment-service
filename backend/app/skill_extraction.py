@@ -54,7 +54,7 @@ TERMS = {**ALIASES, **EXTRA_TERMS}
 ROLE_WORDS = re.compile(r"\b(?:engineer|developer|designer|manager|scientist|officer|analyst|specialist|associate|executive|jockey)\b", re.I)
 BACKGROUND = re.compile(r"^(?:about\b|why join us|our values|our team|benefits|perks|disclosures|employee practices|where are we|the problem|why is the problem|what can we create|how do we do it|few stats|faq|our captains)", re.I)
 ROLE_SECTION = re.compile(r"^(?:job |key |principal |roles?\s*(?:&|and)\s*)?responsibilit(?:y|ies)|^ideal candidate profile|^desired candidate profile|^about the role|^specific duties|^essential functions|^broad responsibility", re.I)
-REQUIRED_SECTION = re.compile(r"^(?:requirements?|required(?: skills| qualifications| experience)?|essential qualifications|qualifications?(?: for .+)?|training, skills|competency and position requirements|experience required|must have|we are looking for)", re.I)
+REQUIRED_SECTION = re.compile(r"^(?:requirements?|required(?: skills(?:\s*&\s*qualifications)?| qualifications| experience)?|essential qualifications|qualifications?(?: for .+)?|training, skills|competency and position requirements|experience required|must have|we are looking for)", re.I)
 PREFERRED_SECTION = re.compile(r"^(?:preferred|nice[- ]to[- ]have|desired to have|good to have)", re.I)
 UNSPECIFIED_SECTION = re.compile(r"^(?:skillsets?|specific skills|job skills|experience|competenc(?:y|ies))\b", re.I)
 OTHER_SECTION = re.compile(r"^(?:education|physical factors|working conditions|schedule|quality and quantity standards)\b", re.I)
@@ -102,6 +102,9 @@ def _role_heading(text: str, next_text: str = "") -> str | None:
     explicit = re.match(r"^(?:job role|job title|position(?: title)?|general job title)\s*[:\-–]\s*(.+)$", plain, re.I)
     if explicit:
         plain = explicit.group(1).strip()
+    elif ":" in plain or re.search(r"\b(?:leader|example|must|associate to|perform|concept|production work)\b", plain, re.I):
+        return None
+    plain = re.sub(r"\s*[-–]\s*Cars24\.com\s*\([^)]*\)$", "", plain, flags=re.I)
     if len(plain) > 75 or not ROLE_WORDS.search(plain):
         return None
     if re.search(r"\b(?:experience|knowledge|proficiency|responsibilities|requirements|qualifications|candidate|team|our|looking|years?)\b", plain, re.I):
@@ -137,6 +140,8 @@ def _section(text: str) -> tuple[str | None, str]:
         (OTHER_SECTION, "other"), (UNSPECIFIED_SECTION, "unspecified"),
     ]:
         if pattern.match(stripped):
+            if name == "unspecified" and re.match(r"^experience\b", stripped, re.I) and not re.fullmatch(r"experience", stripped, re.I):
+                continue
             if ":" in text:
                 prefix, remainder = text.split(":", 1)
                 if len(prefix.split()) <= 6:
@@ -147,9 +152,10 @@ def _section(text: str) -> tuple[str | None, str]:
 
 
 def _category(text: str, section: str) -> str:
-    if PREFERRED_CUE.search(text):
+    local = re.split(r"[.!?]\s*(?:\(|[A-Z])", text, maxsplit=1)[0]
+    if PREFERRED_CUE.search(local):
         return "preferred"
-    if REQUIRED_CUE.search(text):
+    if REQUIRED_CUE.search(local):
         return "required"
     return section if section in {"required", "preferred"} else "unspecified"
 
@@ -190,21 +196,15 @@ def _novel_phrases(text: str) -> list[str]:
     candidates = []
     cue = SKILL_CUE.search(text)
     if cue:
-        phrase = cue.group(1)
+        phrase = re.sub(r"\([^)]*\)", "", cue.group(1))
         phrase = re.split(r"\b(?:is a plus|would be an added advantage|will be an added advantage)\b", phrase, maxsplit=1, flags=re.I)[0]
         phrase = STOP_TAIL.split(phrase, maxsplit=1)[0]
         for part in re.split(r",|\s+and\s+|\s*&\s*", phrase):
             part = part.strip(" .:;()")
             part = re.sub(r"^(?:the|a|an|good|strong|excellent|working|basic)\s+", "", part, flags=re.I)
-            if 1 <= len(part.split()) <= 5 and len(part) >= 3:
-                candidates.append(part)
-    elif ACTION_START.match(text):
-        phrase = ACTION_START.sub("", text, count=1)
-        phrase = STOP_TAIL.split(phrase, maxsplit=1)[0]
-        phrase = re.split(r"[.;]", phrase, maxsplit=1)[0]
-        for part in re.split(r",|\s+and\s+|\s*&\s*", phrase):
-            part = part.strip(" .:;()")
-            if 1 <= len(part.split()) <= 5 and len(part) >= 4:
+            if (1 <= len(part.split()) <= 5 and len(part) >= 3
+                    and part.casefold() not in {"web", "the", "everything", "parts", "components", "engine", "core", "google"}
+                    and not re.search(r"\b(?:and|or|with|an|a|the|to|for|from|of|in)$", part, re.I)):
                 candidates.append(part)
     return candidates
 
@@ -212,7 +212,7 @@ def _novel_phrases(text: str) -> list[str]:
 def _suggestions(lines: list[Line], role_positions: list[tuple[int, str]], selected_role: str | None) -> list[dict]:
     section = "unspecified"
     suggestions: list[dict] = []
-    seen: set[tuple[str, str]] = set()
+    seen: dict[str, int] = {}
     active_role = None
     for line in lines:
         role_at_line = next((role for index, role in role_positions if index == line.index), None)
@@ -237,6 +237,8 @@ def _suggestions(lines: list[Line], role_positions: list[tuple[int, str]], selec
         category = _category(text, section)
         kind = "other_requirement" if QUALIFICATION_CUE.search(text) and not _known_terms(text) else "skill"
         terms = _known_terms(text)
+        if not re.search(r"\b(?:expert on|knowledge of|proficien(?:t|cy) in|programming in|\bR\s+(?:language|programming))\b", text, re.I):
+            terms = [hit for hit in terms if hit[2] != "R"]
         alternatives = _alternative_group(text, terms)
         groups: list[tuple[str, list[str]]] = []
         if alternatives:
@@ -253,10 +255,18 @@ def _suggestions(lines: list[Line], role_positions: list[tuple[int, str]], selec
         if kind == "other_requirement" and not groups:
             groups.append((text[:100], [text[:100]]))
         for label, options in groups:
-            key = (label.casefold(), category)
+            key = label.casefold()
             if key in seen:
+                previous = suggestions[seen[key]]
+                priority = {"unspecified": 0, "preferred": 1, "required": 2}
+                if priority[category] > priority[previous["category"]]:
+                    previous["category"] = category
+                    previous["source_id"] = line.evidence.id
+                    previous["source_location"] = line.evidence.location
+                    previous["source_quote"] = text[:350]
+                    previous["source_section"] = section
                 continue
-            seen.add(key)
+            seen[key] = len(suggestions)
             suggestions.append({
                 "id": f"{line.evidence.id}:{line.index}:{len(suggestions)}",
                 "label": label,
