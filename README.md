@@ -10,6 +10,8 @@ The design uses a warm Paper & Ember palette in light and dark modes. The UI is 
 
 For the interview walkthrough, see the [high-level design](docs/HLD.md), [complete working specification](docs/WORKING_SPEC.md), and [QA report](docs/QA_REPORT.md).
 
+For a code-level architecture map and flow walkthrough, see the [Graphify guide](graphify/README.md). The interactive graph can be downloaded and opened in a browser.
+
 ## Quick start
 
 Requires Python 3.12+ and Node.js 22+.
